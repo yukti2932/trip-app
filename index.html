@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrioSync V24 - Permanent</title>
+    <title>TrioSync V25 - Infinite</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -185,6 +185,7 @@
     <div id="settings-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 fade-in"><div class="royal-card w-full max-w-sm p-6"><h3 class="font-royal font-bold text-xl mb-4 text-[#4a0404]">Trip Decree</h3><label class="block font-royal text-xs uppercase tracking-wide text-[#4a3b32] mb-1">Commencement</label><input id="set-date" type="date" class="w-full bg-[#fcf6e6] border border-[#d4af37] p-2 mb-4 font-serif"><label class="block font-royal text-xs uppercase tracking-wide text-[#4a3b32] mb-1">Duration (Suns)</label><input id="set-days" type="number" class="w-full bg-[#fcf6e6] border border-[#d4af37] p-2 mb-6 font-serif"><div class="flex justify-end gap-2"><button onclick="closeModal('settings-modal')" class="px-4 py-2 text-[#4a3b32] font-royal">Cancel</button><button onclick="saveSettings()" class="px-4 py-2 bg-[#4a0404] text-[#d4af37] font-royal border border-[#d4af37]">Seal</button></div></div></div>
 
     <script>
+        // CONFIG
         const SUPABASE_URL = 'https://rpdaituulgowvgzxjaeh.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZGFpdHV1bGdvd3ZnenhqYWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY3NDgyMzEsImV4cCI6MjA4MjMyNDIzMX0.pq8398t-2laAuo_V69gZBl_kQ6Yjp6_RgroYMFxBfQA';
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -239,21 +240,26 @@
         function calculateSettlements() { let b={'Yukti':0,'Rejith':0,'Neha':0}; state.expenses.forEach(e => { let factor = e.currency === 'NPR' ? 1.6 : 1; let paidINR = e.total / factor; b[e.paidBy] += paidINR; if(e.split) Object.entries(e.split).forEach(([p,a]) => { b[p] -= (a / factor); }); }); let d=[],c=[]; Object.entries(b).forEach(([p,a])=>{if(a<-1)d.push({p,a}); if(a>1)c.push({p,a})}); let s=[]; let i=0,j=0; while(i<d.length && j<c.length){ let amt=Math.min(Math.abs(d[i].a),c[j].a); s.push(`${d[i].p} pays ${c[j].p} ₹${Math.round(amt)}`); d[i].a+=amt; c[j].a-=amt; if(Math.abs(d[i].a)<1)i++; if(c[j].a<1)j++; } return {balances:b, settlements:s}; }
         function saveExpense() { const item=document.getElementById('w-item').value, currency=document.getElementById('w-currency').value, y=parseFloat(document.getElementById('amt-yukti').value)||0, r=parseFloat(document.getElementById('amt-rejith').value)||0, n=parseFloat(document.getElementById('amt-neha').value)||0, total=y+r+n; if(item&&total>0){ state.expenses.unshift({id:Date.now(), item, total, currency, paidBy:tempPayer, split:{'Yukti':y,'Rejith':r,'Neha':n}}); closeModal('wallet-modal'); saveData(); } }
 
-        // --- BOOK (Nav Bar Fixed) ---
+        // --- BOOK (Optimized Next) ---
         function renderScrapbook(c) {
             if (!isBookOpen) { c.innerHTML = `<div class="fade-in flex flex-col items-center justify-center h-[600px]"><div class="adventure-book" onclick="isBookOpen=true; refreshUI()"><div class="adventure-map"></div><div class="adventure-title">ADVENTURE</div><div class="book-clasp"><i data-lucide="lock" color="#2c1810" size="16"></i></div></div></div>`; } 
             else {
                 while(state.scrapbook.length <= currentSpreadIndex+1) state.scrapbook.push({title:'New', content:''});
                 const l=state.scrapbook[currentSpreadIndex], r=state.scrapbook[currentSpreadIndex+1];
-                // Added Navigation BAR at bottom
-                c.innerHTML = `<div class="fade-in flex flex-col items-center justify-center h-full min-h-[600px] gap-6"><div class="book-spread"><div class="book-spine"></div><div class="book-page left"><div class="font-royal text-center text-[#4a0404] border-b-2 border-[#d4af37] pb-2 mb-4 text-xs" contenteditable="true" onblur="updateTitle(${currentSpreadIndex},this.innerText)">${l.title}</div><div class="font-hand text-2xl h-full outline-none" contenteditable="true" onblur="updateScrapbook(${currentSpreadIndex},this.innerHTML)">${l.content}</div></div><div class="book-page right"><div class="font-royal text-center text-[#4a0404] border-b-2 border-[#d4af37] pb-2 mb-4 text-xs" contenteditable="true" onblur="updateTitle(${currentSpreadIndex+1},this.innerText)">${r.title}</div><div class="font-hand text-2xl h-full outline-none" contenteditable="true" onblur="updateScrapbook(${currentSpreadIndex+1},this.innerHTML)">${r.content}</div></div></div><div class="flex gap-4 p-4 bg-[#2a1b12] rounded border border-[#d4af37] shadow-lg sticky bottom-4 z-50"><button onclick="if(currentSpreadIndex>0){currentSpreadIndex-=2;refreshUI()}" class="text-[#d4af37] hover:text-white">← Prev</button><button onclick="addScrapbookPage()" class="bg-[#d4af37] text-[#2c1810] px-4 font-bold rounded hover:bg-[#bfa048]">ADD NEW SPREAD</button><button onclick="currentSpreadIndex+=2;refreshUI()" class="text-[#d4af37] hover:text-white">Next →</button><button onclick="isBookOpen=false;refreshUI()" class="text-[#a89f91] ml-4 hover:text-white">Close Book</button></div></div>`;
+                c.innerHTML = `<div class="fade-in flex flex-col items-center justify-center h-full min-h-[600px] gap-6"><div class="book-spread"><div class="book-spine"></div><div class="book-page left"><div class="font-royal text-center text-[#4a0404] border-b-2 border-[#d4af37] pb-2 mb-4 text-xs" contenteditable="true" onblur="updateTitle(${currentSpreadIndex},this.innerText)">${l.title}</div><div class="font-hand text-2xl h-full outline-none" contenteditable="true" onblur="updateScrapbook(${currentSpreadIndex},this.innerHTML)">${l.content}</div></div><div class="book-page right"><div class="font-royal text-center text-[#4a0404] border-b-2 border-[#d4af37] pb-2 mb-4 text-xs" contenteditable="true" onblur="updateTitle(${currentSpreadIndex+1},this.innerText)">${r.title}</div><div class="font-hand text-2xl h-full outline-none" contenteditable="true" onblur="updateScrapbook(${currentSpreadIndex+1},this.innerHTML)">${r.content}</div></div></div><div class="flex gap-6"><button onclick="if(currentSpreadIndex>0){currentSpreadIndex-=2;refreshUI()}" class="text-[#d4af37]">← Prev</button><span class="text-[#d4af37] text-xs">SPREAD ${currentSpreadIndex/2 + 1}</span><button onclick="nextSpread()" class="text-[#d4af37]">Next →</button><button onclick="isBookOpen=false;refreshUI()" class="text-[#4a0404] underline ml-4">Close Book</button></div></div>`;
             }
         }
-        function addScrapbookPage() { 
-            state.scrapbook.push({title: 'New Page', content: ''}); state.scrapbook.push({title: 'Notes', content: ''}); 
-            currentSpreadIndex = state.scrapbook.length - 2; 
-            saveData(); 
-            refreshUI(); // Forced Refresh
+        
+        function nextSpread() {
+            if (currentSpreadIndex + 2 < state.scrapbook.length) {
+                currentSpreadIndex += 2;
+            } else {
+                state.scrapbook.push({title: 'New Page', content: ''});
+                state.scrapbook.push({title: 'Notes', content: ''});
+                currentSpreadIndex += 2;
+                saveData();
+            }
+            refreshUI();
         }
 
         // --- Standard Functions ---
