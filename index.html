@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrioSync V25 - Infinite</title>
+    <title>TrioSync V25 - Final</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,17 +20,8 @@
                         serif: ['"Playfair Display"', 'serif'],
                         hand: ['"Patrick Hand"', 'cursive'],
                     },
-                    colors: {
-                        wood: "#2a1b12",
-                        gold: "#d4af37",
-                        parchment: "#f3e5ab",
-                        ink: "#2c1810",
-                        burgundy: "#4a0404"
-                    },
-                    boxShadow: {
-                        'royal': '0 10px 30px -5px rgba(0, 0, 0, 0.6)',
-                        'glow': '0 0 15px rgba(212, 175, 55, 0.3)'
-                    }
+                    colors: { wood: "#2a1b12", gold: "#d4af37", parchment: "#f3e5ab", ink: "#2c1810", burgundy: "#4a0404" },
+                    boxShadow: { 'royal': '0 10px 30px -5px rgba(0, 0, 0, 0.6)', 'glow': '0 0 15px rgba(212, 175, 55, 0.3)' }
                 }
             }
         }
@@ -39,59 +30,26 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* Background & Basics */
-        body {
-            background-color: #dcbfa6;
-            background-image: url('https://www.transparenttextures.com/patterns/arabesque.png');
-            background-blend-mode: multiply;
-            color: #2c1810;
-            overflow: hidden; 
-        }
+        body { background-color: #dcbfa6; background-image: url('https://www.transparenttextures.com/patterns/arabesque.png'); background-blend-mode: multiply; color: #2c1810; overflow: hidden; }
         .wood-corner { position: fixed; z-index: 100; width: 80px; height: 80px; pointer-events: none; background-size: contain; background-repeat: no-repeat; opacity: 0.9; }
         .wc-tl { top: 0; left: 0; background-image: url('https://img.icons8.com/external-flaticons-lineal-color-flat-icons/64/external-corner-border-and-frame-flaticons-lineal-color-flat-icons-2.png'); transform: rotate(180deg); }
         .wc-tr { top: 0; right: 0; background-image: url('https://img.icons8.com/external-flaticons-lineal-color-flat-icons/64/external-corner-border-and-frame-flaticons-lineal-color-flat-icons-2.png'); transform: rotate(-90deg); }
-        
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Royal Card */
-        .royal-card {
-            background: #fffef8;
-            border: 2px solid #d4af37;
-            border-radius: 6px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            position: relative;
-        }
-
-        /* Checkbox Buttons */
+        .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .fade-in { animation: fadeIn 0.3s ease-out; } @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .royal-card { background: #fffef8; border: 2px solid #d4af37; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: relative; }
         .pack-btn { width: 24px; height: 24px; border: 2px solid; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: 'Cinzel'; background: rgba(255,255,255,0.5); }
         .pb-yukti { border-color: #1e3a8a; color: #1e3a8a; } .pb-yukti.checked { background-color: #1e3a8a; color: #d4af37; }
         .pb-rejith { border-color: #581c87; color: #581c87; } .pb-rejith.checked { background-color: #581c87; color: #d4af37; }
         .pb-neha { border-color: #be185d; color: #be185d; } .pb-neha.checked { background-color: #be185d; color: #d4af37; }
-        
-        /* Book Styles */
-        .adventure-book {
-            width: 240px; height: 340px;
-            background-color: #8a624a; background-image: url('https://www.transparenttextures.com/patterns/black-scales.png');
-            border-radius: 4px 16px 16px 4px;
-            box-shadow: 15px 15px 40px rgba(0,0,0,0.6), inset 5px 0 10px rgba(0,0,0,0.3);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            position: relative; cursor: pointer; transition: transform 0.3s; border: 1px solid #5d4037;
-        }
+        .adventure-book { width: 240px; height: 340px; background-color: #8a624a; background-image: url('https://www.transparenttextures.com/patterns/black-scales.png'); border-radius: 4px 16px 16px 4px; box-shadow: 15px 15px 40px rgba(0,0,0,0.6), inset 5px 0 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; cursor: pointer; transition: transform 0.3s; border: 1px solid #5d4037; }
         .adventure-book:hover { transform: scale(1.02); }
         .adventure-map { position: absolute; inset: 20px; background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/World_map_blank_without_borders.svg/2000px-World_map_blank_without_borders.svg.png'); background-size: cover; opacity: 0.2; filter: sepia(1); mix-blend-mode: multiply; pointer-events: none; }
         .book-clasp { position: absolute; right: 10px; top: 50%; width: 40px; height: 50px; background: #b8860b; border: 2px solid #3e2723; border-radius: 4px; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); z-index: 20; display: flex; align-items: center; justify-content: center;}
-        
-        /* OPEN SPREAD */
         .book-spread { width: 100%; max-width: 900px; height: 500px; display: flex; background: #fdfbf7; box-shadow: 0 30px 70px rgba(0,0,0,0.6); border-radius: 4px; position: relative; }
         .book-page { flex: 1; padding: 40px; overflow-y: auto; background-image: url('https://www.transparenttextures.com/patterns/cream-paper.png'); position: relative; }
         .book-page.left { border-right: 1px solid #dcdcdc; border-radius: 4px 0 0 4px; box-shadow: inset -20px 0 40px rgba(0,0,0,0.05); }
         .book-page.right { border-radius: 0 4px 4px 0; box-shadow: inset 20px 0 40px rgba(0,0,0,0.05); }
         .book-spine { position: absolute; left: 50%; top: 0; bottom: 0; width: 40px; transform: translateX(-50%); background: linear-gradient(90deg, rgba(0,0,0,0.1), transparent, rgba(0,0,0,0.1)); pointer-events: none; z-index: 10; }
-
-        /* Nav & Notes */
         .nav-btn { position: relative; transition: all 0.2s; opacity: 0.7; }
         .nav-btn:hover { opacity: 1; color: #d4af37; }
         .nav-btn.active { opacity: 1; color: #d4af37; font-weight: bold; text-shadow: 0 0 10px rgba(212, 175, 55, 0.4); }
@@ -106,13 +64,8 @@
     <header class="bg-[#2a1b12] border-b-4 border-[#d4af37] shadow-royal z-50 shrink-0 relative">
         <div class="px-6 py-3 flex justify-between items-center max-w-7xl mx-auto w-full">
             <div class="pl-4 md:pl-0">
-                <h1 class="font-royal font-bold text-2xl flex items-center gap-3 text-[#d4af37] drop-shadow-md">
-                    <i data-lucide="crown" size="28"></i> TrioSync
-                </h1>
-                <div class="text-[10px] text-[#a89f91] flex items-center gap-2 mt-1 font-serif tracking-widest">
-                    <span id="sync-dot" class="w-2 h-2 bg-green-600 rounded-full border border-white/20"></span>
-                    <span id="sync-status">Scribe Ready</span>
-                </div>
+                <h1 class="font-royal font-bold text-2xl flex items-center gap-3 text-[#d4af37] drop-shadow-md"><i data-lucide="crown" size="28"></i> TrioSync</h1>
+                <div class="text-[10px] text-[#a89f91] flex items-center gap-2 mt-1 font-serif tracking-widest"><span id="sync-dot" class="w-2 h-2 bg-green-600 rounded-full border border-white/20"></span><span id="sync-status">Scribe Ready</span></div>
             </div>
             <div class="flex items-center gap-4 pr-4 md:pr-0">
                 <div class="bg-[#150b08] p-1 rounded border border-[#4a3b32] flex gap-1 shadow-inner">
@@ -138,7 +91,6 @@
 
     <div class="flex flex-1 overflow-hidden max-w-7xl mx-auto w-full relative z-0">
         <main id="app-container" class="flex-1 overflow-y-auto p-4 md:p-8 pb-32 no-scrollbar"></main>
-        
         <aside id="sidebar" class="fixed inset-0 z-[60] transform translate-x-full transition-transform duration-300 md:translate-x-0 md:static md:block md:w-80 md:my-6 md:mr-6 md:rounded bg-black/80 md:bg-transparent">
             <div class="absolute right-0 top-0 bottom-0 w-80 bg-[#f3e5ab] md:border-2 md:border-[#d4af37] shadow-2xl md:shadow-royal md:w-full md:h-full overflow-y-auto rounded-sm" onclick="event.stopPropagation()">
                 <div class="p-6 h-full flex flex-col relative" style="background-image: url('https://www.transparenttextures.com/patterns/cream-paper.png');">
@@ -162,16 +114,11 @@
             <h3 class="font-royal font-bold text-xl mb-4 text-[#4a0404] border-b-2 border-[#d4af37] pb-2">Add to Treasury</h3>
             <input id="w-item" type="text" placeholder="Item Name" class="w-full bg-transparent border-b-2 border-[#d4af37] p-2 font-hand text-xl focus:border-[#4a0404] outline-none mb-3 placeholder-[#a89f91]">
             <div class="flex items-center gap-4 mb-4"><select id="w-currency" class="bg-[#fcf6e6] border border-[#d4af37] p-1 text-xs font-bold text-[#4a0404] rounded"><option value="INR">INR (₹)</option><option value="NPR">NPR (Np)</option></select><div class="text-xs font-royal text-[#4a3b32] uppercase">Payer</div></div>
-            <div class="grid grid-cols-3 gap-2 mb-4">
-                <button onclick="tempPayer='Yukti'; updatePayerUI(this)" class="payer-opt border border-[#d4af37] p-2 rounded-sm text-xs font-royal uppercase">Yukti</button>
-                <button onclick="tempPayer='Rejith'; updatePayerUI(this)" class="payer-opt border border-[#d4af37] p-2 rounded-sm text-xs font-royal uppercase">Rejith</button>
-                <button onclick="tempPayer='Neha'; updatePayerUI(this)" class="payer-opt border border-[#d4af37] p-2 rounded-sm text-xs font-royal uppercase">Neha</button>
-            </div>
+            <div class="grid grid-cols-3 gap-2 mb-4"><button onclick="tempPayer='Yukti'; updatePayerUI(this)" class="payer-opt border border-[#d4af37] p-2 rounded-sm text-xs font-royal uppercase">Yukti</button><button onclick="tempPayer='Rejith'; updatePayerUI(this)" class="payer-opt border border-[#d4af37] p-2 rounded-sm text-xs font-royal uppercase">Rejith</button><button onclick="tempPayer='Neha'; updatePayerUI(this)" class="payer-opt border border-[#d4af37] p-2 rounded-sm text-xs font-royal uppercase">Neha</button></div>
             <div class="bg-[#fffdf5] p-3 border border-dashed border-[#d4af37] mb-6 rounded text-sm"><div class="flex justify-between mb-2"><span class="font-royal uppercase text-[#4a3b32] text-xs">Split Amount</span><button onclick="splitEvenly()" class="text-xs font-bold text-[#4a0404] underline">Split Evenly</button></div><div class="space-y-2 font-mono"><div class="flex gap-2 items-center"><span>Y:</span><input id="amt-yukti" type="number" class="w-full bg-transparent border-b border-[#d4af37] text-center"></div><div class="flex gap-2 items-center"><span>R:</span><input id="amt-rejith" type="number" class="w-full bg-transparent border-b border-[#d4af37] text-center"></div><div class="flex gap-2 items-center"><span>N:</span><input id="amt-neha" type="number" class="w-full bg-transparent border-b border-[#d4af37] text-center"></div></div></div>
             <div class="flex gap-3"><button onclick="closeModal('wallet-modal')" class="flex-1 py-2 font-royal text-[#4a3b32]">Cancel</button><button onclick="saveExpense()" class="flex-1 py-2 bg-[#4a0404] text-[#d4af37] font-royal font-bold shadow-lg">Seal</button></div>
         </div>
     </div>
-
     <div id="flight-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 fade-in">
         <div class="royal-card w-full max-w-md p-6">
             <h3 class="font-royal font-bold text-xl mb-4 text-[#4a0404]">Record Passage</h3>
@@ -181,11 +128,9 @@
             <div class="flex justify-end gap-3"><button onclick="closeModal('flight-modal')" class="px-4 py-2 font-royal text-[#4a3b32]">Discard</button><button onclick="saveFlight()" class="px-6 py-2 bg-[#2c1810] text-[#d4af37] font-royal shadow-lg">Inscribe</button></div>
         </div>
     </div>
-
     <div id="settings-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 fade-in"><div class="royal-card w-full max-w-sm p-6"><h3 class="font-royal font-bold text-xl mb-4 text-[#4a0404]">Trip Decree</h3><label class="block font-royal text-xs uppercase tracking-wide text-[#4a3b32] mb-1">Commencement</label><input id="set-date" type="date" class="w-full bg-[#fcf6e6] border border-[#d4af37] p-2 mb-4 font-serif"><label class="block font-royal text-xs uppercase tracking-wide text-[#4a3b32] mb-1">Duration (Suns)</label><input id="set-days" type="number" class="w-full bg-[#fcf6e6] border border-[#d4af37] p-2 mb-6 font-serif"><div class="flex justify-end gap-2"><button onclick="closeModal('settings-modal')" class="px-4 py-2 text-[#4a3b32] font-royal">Cancel</button><button onclick="saveSettings()" class="px-4 py-2 bg-[#4a0404] text-[#d4af37] font-royal border border-[#d4af37]">Seal</button></div></div></div>
 
     <script>
-        // CONFIG
         const SUPABASE_URL = 'https://rpdaituulgowvgzxjaeh.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZGFpdHV1bGdvd3ZnenhqYWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY3NDgyMzEsImV4cCI6MjA4MjMyNDIzMX0.pq8398t-2laAuo_V69gZBl_kQ6Yjp6_RgroYMFxBfQA';
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -240,26 +185,36 @@
         function calculateSettlements() { let b={'Yukti':0,'Rejith':0,'Neha':0}; state.expenses.forEach(e => { let factor = e.currency === 'NPR' ? 1.6 : 1; let paidINR = e.total / factor; b[e.paidBy] += paidINR; if(e.split) Object.entries(e.split).forEach(([p,a]) => { b[p] -= (a / factor); }); }); let d=[],c=[]; Object.entries(b).forEach(([p,a])=>{if(a<-1)d.push({p,a}); if(a>1)c.push({p,a})}); let s=[]; let i=0,j=0; while(i<d.length && j<c.length){ let amt=Math.min(Math.abs(d[i].a),c[j].a); s.push(`${d[i].p} pays ${c[j].p} ₹${Math.round(amt)}`); d[i].a+=amt; c[j].a-=amt; if(Math.abs(d[i].a)<1)i++; if(c[j].a<1)j++; } return {balances:b, settlements:s}; }
         function saveExpense() { const item=document.getElementById('w-item').value, currency=document.getElementById('w-currency').value, y=parseFloat(document.getElementById('amt-yukti').value)||0, r=parseFloat(document.getElementById('amt-rejith').value)||0, n=parseFloat(document.getElementById('amt-neha').value)||0, total=y+r+n; if(item&&total>0){ state.expenses.unshift({id:Date.now(), item, total, currency, paidBy:tempPayer, split:{'Yukti':y,'Rejith':r,'Neha':n}}); closeModal('wallet-modal'); saveData(); } }
 
-        // --- BOOK (Optimized Next) ---
+        // --- BOOK (Nav Bar Fixed) ---
         function renderScrapbook(c) {
             if (!isBookOpen) { c.innerHTML = `<div class="fade-in flex flex-col items-center justify-center h-[600px]"><div class="adventure-book" onclick="isBookOpen=true; refreshUI()"><div class="adventure-map"></div><div class="adventure-title">ADVENTURE</div><div class="book-clasp"><i data-lucide="lock" color="#2c1810" size="16"></i></div></div></div>`; } 
             else {
                 while(state.scrapbook.length <= currentSpreadIndex+1) state.scrapbook.push({title:'New', content:''});
                 const l=state.scrapbook[currentSpreadIndex], r=state.scrapbook[currentSpreadIndex+1];
-                c.innerHTML = `<div class="fade-in flex flex-col items-center justify-center h-full min-h-[600px] gap-6"><div class="book-spread"><div class="book-spine"></div><div class="book-page left"><div class="font-royal text-center text-[#4a0404] border-b-2 border-[#d4af37] pb-2 mb-4 text-xs" contenteditable="true" onblur="updateTitle(${currentSpreadIndex},this.innerText)">${l.title}</div><div class="font-hand text-2xl h-full outline-none" contenteditable="true" onblur="updateScrapbook(${currentSpreadIndex},this.innerHTML)">${l.content}</div></div><div class="book-page right"><div class="font-royal text-center text-[#4a0404] border-b-2 border-[#d4af37] pb-2 mb-4 text-xs" contenteditable="true" onblur="updateTitle(${currentSpreadIndex+1},this.innerText)">${r.title}</div><div class="font-hand text-2xl h-full outline-none" contenteditable="true" onblur="updateScrapbook(${currentSpreadIndex+1},this.innerHTML)">${r.content}</div></div></div><div class="flex gap-6"><button onclick="if(currentSpreadIndex>0){currentSpreadIndex-=2;refreshUI()}" class="text-[#d4af37]">← Prev</button><span class="text-[#d4af37] text-xs">SPREAD ${currentSpreadIndex/2 + 1}</span><button onclick="nextSpread()" class="text-[#d4af37]">Next →</button><button onclick="isBookOpen=false;refreshUI()" class="text-[#4a0404] underline ml-4">Close Book</button></div></div>`;
+                // Added Navigation BAR at bottom
+                c.innerHTML = `<div class="fade-in flex flex-col items-center justify-center h-full min-h-[600px] gap-6"><div class="book-spread"><div class="book-spine"></div><div class="book-page left"><div class="font-royal text-center text-[#4a0404] border-b-2 border-[#d4af37] pb-2 mb-4 text-xs" contenteditable="true" onblur="updateTitle(${currentSpreadIndex},this.innerText)">${l.title}</div><div class="font-hand text-2xl h-full outline-none" contenteditable="true" onblur="updateScrapbook(${currentSpreadIndex},this.innerHTML)">${l.content}</div></div><div class="book-page right"><div class="font-royal text-center text-[#4a0404] border-b-2 border-[#d4af37] pb-2 mb-4 text-xs" contenteditable="true" onblur="updateTitle(${currentSpreadIndex+1},this.innerText)">${r.title}</div><div class="font-hand text-2xl h-full outline-none" contenteditable="true" onblur="updateScrapbook(${currentSpreadIndex+1},this.innerHTML)">${r.content}</div></div></div><div class="flex gap-4 p-4 bg-[#2a1b12] rounded border border-[#d4af37] shadow-lg sticky bottom-4 z-50"><button onclick="if(currentSpreadIndex>0){currentSpreadIndex-=2;refreshUI()}" class="text-[#d4af37] hover:text-white">← Prev</button><button onclick="addScrapbookPage()" class="bg-[#d4af37] text-[#2c1810] px-4 font-bold rounded hover:bg-[#bfa048]">ADD NEW SPREAD</button><button onclick="currentSpreadIndex+=2;refreshUI()" class="text-[#d4af37] hover:text-white">Next →</button><button onclick="deleteSpread()" class="text-red-500 hover:text-red-300 ml-2">Del</button><button onclick="resetBook()" class="text-red-500 hover:text-red-300 ml-2">RESET BOOK</button><button onclick="isBookOpen=false;refreshUI()" class="text-[#a89f91] ml-4 hover:text-white">Close</button></div></div>`;
             }
         }
-        
-        function nextSpread() {
-            if (currentSpreadIndex + 2 < state.scrapbook.length) {
-                currentSpreadIndex += 2;
-            } else {
-                state.scrapbook.push({title: 'New Page', content: ''});
-                state.scrapbook.push({title: 'Notes', content: ''});
-                currentSpreadIndex += 2;
-                saveData();
+        function addScrapbookPage() { 
+            state.scrapbook.push({title: 'New Page', content: ''}); state.scrapbook.push({title: 'Notes', content: ''}); 
+            currentSpreadIndex = state.scrapbook.length - 2; 
+            saveData(); refreshUI();
+        }
+        function deleteSpread() {
+            if (confirm("Delete this spread?")) {
+                if(state.scrapbook.length > 2) {
+                    state.scrapbook.splice(currentSpreadIndex, 2);
+                    if(currentSpreadIndex >= state.scrapbook.length) currentSpreadIndex -= 2;
+                    saveData(); refreshUI();
+                } else { alert("Cannot delete the last spread!"); }
             }
-            refreshUI();
+        }
+        function resetBook() {
+            if(confirm("WIPE ALL BOOK DATA? This cannot be undone.")) {
+                state.scrapbook = [{title: 'Cover', content: '...'}, {title: 'Page 1', content: '...'}];
+                currentSpreadIndex = 0;
+                saveData(); refreshUI();
+            }
         }
 
         // --- Standard Functions ---
