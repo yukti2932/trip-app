@@ -344,96 +344,196 @@
         function updatePayerUI(b){document.querySelectorAll('.payer-opt').forEach(x=>x.classList.remove('bg-[#7b1113]','text-white')); if(b)b.classList.add('bg-[#7b1113]','text-white');}
     </script> -->
     <script>
+        // --- CONFIGURATION ---
         const SUPABASE_URL = 'https://rpdaituulgowvgzxjaeh.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZGFpdHV1bGdvd3ZnenhqYWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY3NDgyMzEsImV4cCI6MjA4MjMyNDIzMX0.pq8398t-2laAuo_V69gZBl_kQ6Yjp6_RgroYMFxBfQA';
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const USERS = ['Yukti', 'Rejith', 'Neha'];
+        
+        // --- STATE MANAGEMENT ---
         let currentUser = localStorage.getItem('trio_user') || null;
         let tempPayer = currentUser || 'Yukti';
         let isBookOpen = false;
         let currentSpreadIndex = 0; 
-        let isDirty = false; // Tracks unsaved local changes
+        let isDirty = false; // Tracks if we have unsaved local changes
 
-        // Default empty state
-        let state = { settings: { startDate: '2025-01-01', duration: 3 }, expenses: [], flights: [], itinerary: {}, packing: { 'General': [] }, explore: { 'Food': [], 'Places': [] }, info: [], photoAlbum: '', scrapbook: [ { title: 'Day 1', content: '<h2>Journey Begins</h2><p>We arrived...</p>' }, { title: 'Day 2', content: '' } ], scratchpad: '' };
+        // Default State
+        let state = { 
+            settings: { startDate: '2025-01-01', duration: 3 }, 
+            expenses: [], 
+            flights: [], 
+            itinerary: {}, 
+            packing: { 'General': [] }, 
+            explore: { 'Food': [], 'Places': [] }, 
+            photoAlbum: '', 
+            scrapbook: [ { title: 'Day 1', content: '<h2>Journey Begins</h2>' }, { title: 'Day 2', content: '' } ], 
+            scratchpad: '' 
+        };
 
+        // --- INITIALIZATION ---
         window.onload = () => { 
             lucide.createIcons(); 
             checkLogin(); 
-            
-            // 1. LOAD LOCAL DATA IMMEDIATELY (Works Offline)
-            const localData = localStorage.getItem('trip_offline_data');
+            registerSW();
+
+            // 1. Load Local Data First (Instant)
+            const localData = localStorage.getItem('trip_smart_data');
             if (localData) {
                 state = JSON.parse(localData);
+                ensureIDs(); // Fix old data structure if needed
                 refreshUI();
             }
 
-            // 2. Try to fetch fresh data from cloud
-            loadData(); 
-
-            // 3. Auto-save loop
-            setInterval(() => {
-                if(navigator.onLine && isDirty) syncToCloud(); // Push changes if online
-                if(navigator.onLine && !isDirty) loadData();   // Pull changes if online & idle
-            }, 3000);
+            // 2. Try Syncing
+            syncLoop();
+            setInterval(syncLoop, 4000); // Check every 4s
 
             if(localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
             updateThemeIcon();
         };
 
-        function checkLogin() { if (!currentUser || !USERS.includes(currentUser)) { const u = prompt("Declare Thyself: (Yukti, Rejith, or Neha)"); if(USERS.includes(u)){ currentUser = u; localStorage.setItem('trio_user', u); location.reload(); } else alert("Unknown Traveler."); } updateUserUI(); }
-        
-        // Theme Toggle
-        function toggleTheme() { document.documentElement.classList.toggle('dark'); const isDark = document.documentElement.classList.contains('dark'); localStorage.setItem('theme', isDark ? 'dark' : 'light'); updateThemeIcon(); }
-        function updateThemeIcon() { const isDark = document.documentElement.classList.contains('dark'); const icon = document.getElementById('theme-icon'); if(icon) { icon.parentElement.innerHTML = `<i id="theme-icon" data-lucide="${isDark ? 'sun' : 'moon'}" size="18"></i>`; lucide.createIcons(); } }
-
-        // --- CORE SYNC LOGIC ---
-        async function loadData() { 
-            if(!navigator.onLine) return;
-            try { 
-                const { data } = await client.from('trip_data').select('app_state').eq('id', 1).single(); 
-                // Only overwrite if cloud is different AND we don't have local unsaved work
-                if(data?.app_state && JSON.stringify(state) !== JSON.stringify(data.app_state) && !isDirty) { 
-                    if(document.activeElement.getAttribute('contenteditable') === 'true') return; // Don't interrupt typing
-                    state = data.app_state; 
-                    localStorage.setItem('trip_offline_data', JSON.stringify(state)); // Update local storage
-                    refreshUI(); 
-                    document.getElementById('sync-status').innerText = "Live"; 
-                    document.getElementById('sync-dot').className = "w-2 h-2 bg-green-500 rounded-full";
-                } 
-            } catch (e) { console.error(e); } 
+        function registerSW() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js').catch(console.error);
+            }
         }
 
-        async function saveData() { 
-            // 1. Save Locally First (Always works)
-            localStorage.setItem('trip_offline_data', JSON.stringify(state));
-            isDirty = true;
-            refreshUI();
+        function checkLogin() { 
+            if (!currentUser || !USERS.includes(currentUser)) { 
+                const u = prompt("Who are you? (Yukti, Rejith, Neha)"); 
+                if(USERS.includes(u)){ currentUser = u; localStorage.setItem('trio_user', u); location.reload(); } 
+                else alert("Access Denied."); 
+            } 
+            updateUserUI(); 
+        }
 
-            // 2. Attempt Sync
-            if(navigator.onLine) {
-                await syncToCloud();
-            } else {
+        // --- SMART SYNC ENGINE ---
+        async function syncLoop() {
+            if (!navigator.onLine) {
                 document.getElementById('sync-status').innerText = "Offline (Saved)";
                 document.getElementById('sync-dot').className = "w-2 h-2 bg-orange-500 rounded-full";
+                return;
             }
+
+            try {
+                // 1. Pull Cloud Data
+                const { data } = await client.from('trip_data').select('app_state').eq('id', 1).single();
+                if (data?.app_state) {
+                    const cloud = data.app_state;
+                    let hasChanges = false;
+
+                    // 2. MERGE LOGIC: Combine Cloud & Local
+                    // Logic: Unions IDs. If ID conflict, keep the one with newer 'updatedAt'.
+                    
+                    const newExpenses = smartMerge(state.expenses, cloud.expenses);
+                    if(JSON.stringify(newExpenses) !== JSON.stringify(state.expenses)) { state.expenses = newExpenses; hasChanges = true; }
+
+                    const newFlights = smartMerge(state.flights, cloud.flights);
+                    if(JSON.stringify(newFlights) !== JSON.stringify(state.flights)) { state.flights = newFlights; hasChanges = true; }
+
+                    // Merge Maps (Itinerary, Packing, Explore)
+                    // We iterate keys and merge the arrays inside them
+                    ['itinerary', 'packing', 'explore'].forEach(key => {
+                        // Merge keys (e.g., if cloud has new Packing Category)
+                        const allKeys = new Set([...Object.keys(state[key]), ...Object.keys(cloud[key] || {})]);
+                        allKeys.forEach(k => {
+                            const localArr = state[key][k] || [];
+                            const cloudArr = (cloud[key] || {})[k] || [];
+                            const mergedArr = smartMerge(localArr, cloudArr);
+                            if(JSON.stringify(mergedArr) !== JSON.stringify(localArr)) {
+                                state[key][k] = mergedArr;
+                                hasChanges = true;
+                            }
+                        });
+                    });
+
+                    // Simple merge for text fields (Last Write Wins if dirty, else accept cloud)
+                    if(!isDirty && cloud.scratchpad !== state.scratchpad) { state.scratchpad = cloud.scratchpad; hasChanges = true; }
+                    if(!isDirty && cloud.photoAlbum !== state.photoAlbum) { state.photoAlbum = cloud.photoAlbum; hasChanges = true; }
+                    if(!isDirty && JSON.stringify(cloud.scrapbook) !== JSON.stringify(state.scrapbook)) { state.scrapbook = cloud.scrapbook; hasChanges = true; }
+
+                    if(hasChanges) {
+                        localStorage.setItem('trip_smart_data', JSON.stringify(state));
+                        refreshUI();
+                    }
+                }
+
+                // 3. Push if we have local edits (or if we merged new cloud stuff and want to unify)
+                // We simplify: If we are 'isDirty', we push our merged state.
+                if (isDirty) {
+                    document.getElementById('sync-status').innerText = "Syncing...";
+                    await client.from('trip_data').update({ app_state: state }).eq('id', 1);
+                    isDirty = false;
+                    document.getElementById('sync-status').innerText = "Live";
+                    document.getElementById('sync-dot').className = "w-2 h-2 bg-green-500 rounded-full";
+                } else {
+                    document.getElementById('sync-status').innerText = "Live";
+                    document.getElementById('sync-dot').className = "w-2 h-2 bg-green-500 rounded-full";
+                }
+
+            } catch (e) { console.error("Sync Error", e); }
         }
 
-        async function syncToCloud() {
-            if(!isDirty) return;
-            document.getElementById('sync-status').innerText = "Syncing...";
-            const { error } = await client.from('trip_data').update({ app_state: state }).eq('id', 1);
-            if(!error) {
-                isDirty = false;
-                document.getElementById('sync-status').innerText = "Saved";
-                document.getElementById('sync-dot').className = "w-2 h-2 bg-green-500 rounded-full";
-            }
+        // --- CORE MERGE ALGORITHM ---
+        function smartMerge(localList, cloudList) {
+            if (!localList) localList = [];
+            if (!cloudList) cloudList = [];
+            
+            const map = new Map();
+            
+            // 1. Add all Local items
+            localList.forEach(item => { if(item.id) map.set(item.id, item); });
+
+            // 2. Merge Cloud items
+            cloudList.forEach(cItem => {
+                if(!cItem.id) return; // Skip invalid data
+                
+                if (map.has(cItem.id)) {
+                    // CONFLICT: Both have it. compare Timestamps.
+                    const lItem = map.get(cItem.id);
+                    // If Cloud is newer than Local, overwrite Local
+                    if ((cItem.updatedAt || 0) > (lItem.updatedAt || 0)) {
+                        map.set(cItem.id, cItem);
+                    }
+                    // Else: Keep Local (my offline edit wins against old cloud data)
+                } else {
+                    // NEW: Cloud has it, I don't. Add it.
+                    map.set(cItem.id, cItem);
+                }
+            });
+
+            // Return values sorted by creation (id) usually, or just values
+            return Array.from(map.values());
         }
+
+        // Unique ID Generator + Timestamp
+        const uid = () => Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        const touch = (item) => { item.updatedAt = Date.now(); return item; }; // Updates timestamp
+
+        // Ensure every item has an ID (Migration for old data)
+        function ensureIDs() {
+            const fix = (arr) => arr.forEach(i => { if(!i.id) i.id = uid(); if(!i.updatedAt) i.updatedAt = 0; });
+            fix(state.expenses);
+            fix(state.flights);
+            Object.values(state.packing).forEach(fix);
+            Object.values(state.explore).forEach(fix);
+            Object.values(state.itinerary).forEach(fix);
+        }
+
+        function persist() {
+            localStorage.setItem('trip_smart_data', JSON.stringify(state));
+            isDirty = true;
+            refreshUI();
+            // Optional: Trigger immediate sync attempt?
+            if(navigator.onLine) syncLoop();
+        }
+
+        // --- UI & FEATURES ---
         
         function refreshUI() { const active = document.querySelector('.nav-btn.active')?.id.replace('d-nav-', '') || 'planner'; renderTab(active); renderSidebar(); }
         function renderTab(tabName) { document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active', 'text-[#ffb300]')); const dBtn = document.getElementById(`d-nav-${tabName}`); if(dBtn) dBtn.classList.add('active', 'text-[#ffb300]'); const container = document.getElementById('app-container'); container.innerHTML = ''; if(tabName === 'planner') renderPlanner(container); if(tabName === 'explore') renderExplore(container); if(tabName === 'packing') renderPacking(container); if(tabName === 'wallet') renderWallet(container); if(tabName === 'memories') renderScrapbook(container); lucide.createIcons(); }
 
-        // --- PACKING ---
+        // PACKING
         function renderPacking(c) {
             let h = `<div class="fade-in grid grid-cols-1 md:grid-cols-2 gap-6 pb-24">`;
             for(const [cat, items] of Object.entries(state.packing)) {
@@ -442,36 +542,58 @@
                     const assigned = item.assigned || ['Yukti','Rejith','Neha'];
                     const completed = item.completed || [];
                     h += `<div class="flex items-center gap-2 border-b border-dashed border-gray-200 dark:border-gray-700 pb-1"><span class="flex-1 font-serif text-lg">${item.name}</span><div class="flex gap-1">`;
-                    ['Yukti', 'Rejith', 'Neha'].forEach(p => { if(assigned.includes(p)) { const isDone = completed.includes(p); let btnClass = ""; if(p === 'Yukti') btnClass = `pb-yukti ${isDone?'checked':''}`; if(p === 'Rejith') btnClass = `pb-rejith ${isDone?'checked':''}`; if(p === 'Neha') btnClass = `pb-neha ${isDone?'checked':''}`; h += `<button onclick="togglePack('${cat}',${idx},'${p}')" class="pack-btn ${btnClass}">${p.charAt(0)}</button>`; } });
-                    h += `</div><button onclick="deleteItem('packing','${cat}',${idx})" class="text-gray-400 hover:text-[#7b1113] dark:hover:text-[#ffb300] ml-2"><i data-lucide="trash-2" size="14"></i></button></div>`;
+                    ['Yukti', 'Rejith', 'Neha'].forEach(p => { if(assigned.includes(p)) { const isDone = completed.includes(p); let btnClass = ""; if(p === 'Yukti') btnClass = `pb-yukti ${isDone?'checked':''}`; if(p === 'Rejith') btnClass = `pb-rejith ${isDone?'checked':''}`; if(p === 'Neha') btnClass = `pb-neha ${isDone?'checked':''}`; h += `<button onclick="togglePack('${cat}','${item.id}','${p}')" class="pack-btn ${btnClass}">${p.charAt(0)}</button>`; } });
+                    h += `</div><button onclick="deletePackItem('${cat}','${item.id}')" class="text-gray-400 hover:text-[#7b1113] dark:hover:text-[#ffb300] ml-2"><i data-lucide="trash-2" size="14"></i></button></div>`;
                 });
                 h += `</div><div class="flex flex-col gap-2 mt-4 pt-2 border-t border-gray-300 dark:border-gray-600"><div class="flex items-center gap-2"><span class="text-[10px] font-nepal uppercase text-gray-500">Assign:</span><div class="flex gap-1" id="assign-${cat}"><button onclick="this.classList.toggle('bg-[#7b1113]'); this.classList.toggle('text-white')" class="text-[10px] border border-gray-400 px-1 rounded bg-[#7b1113] text-white" data-user="Yukti">Y</button><button onclick="this.classList.toggle('bg-[#7b1113]'); this.classList.toggle('text-white')" class="text-[10px] border border-gray-400 px-1 rounded bg-[#7b1113] text-white" data-user="Rejith">R</button><button onclick="this.classList.toggle('bg-[#7b1113]'); this.classList.toggle('text-white')" class="text-[10px] border border-gray-400 px-1 rounded bg-[#7b1113] text-white" data-user="Neha">N</button></div></div><div class="flex gap-2"><input id="add-${cat}-name" placeholder="Item Name..." class="flex-1 bg-transparent border-b border-gray-300 dark:border-gray-600 font-hand text-lg"><button onclick="addPackItem('${cat}')" class="font-bold text-[#7b1113] dark:text-[#ffb300]">+</button></div></div></div>`;
             } 
             h += `<button onclick="addPackingCategory()" class="w-full py-4 border-2 border-dashed border-[#7b1113] dark:border-[#ffb300] text-[#7b1113] dark:text-[#ffb300] font-nepal uppercase tracking-widest col-span-1 md:col-span-2 shadow-sm mb-8 hover:bg-[#fffef8] dark:hover:bg-[#333]">+ Create List</button></div>`;
             c.innerHTML = h;
         }
-
-        function addPackItem(cat) { const name = document.getElementById(`add-${cat}-name`).value; if(!name) return; const container = document.getElementById(`assign-${cat}`); const assigned = []; Array.from(container.children).forEach(btn => { if(btn.classList.contains('bg-[#7b1113]')) assigned.push(btn.getAttribute('data-user')); }); if(assigned.length === 0) { assigned.push('Yukti','Rejith','Neha'); } state.packing[cat].push({ name, assigned, completed: [] }); saveData(); }
-        function togglePack(cat, idx, person) { event.stopPropagation(); const item = state.packing[cat][idx]; if(!item.completed) item.completed=[]; if(item.completed.includes(person)) item.completed = item.completed.filter(p => p !== person); else item.completed.push(person); saveData(); }
-
-        // --- PLANNER ---
-        function renderPlanner(c) {
-            let h = `<div class="fade-in max-w-4xl mx-auto space-y-8 pl-6 relative pb-24"><div class="himalayan-card p-6 relative mb-8"><div class="flex justify-between items-center mb-4 border-b border-[#dcdcdc] dark:border-gray-700 pb-2"><h2 class="font-nepal text-2xl text-[#7b1113] dark:text-[#ffb300] tracking-widest">Flight Deck</h2><button onclick="openModal('flight-modal')" class="bg-[#263238] dark:bg-[#ffb300] text-[#ffb300] dark:text-black px-3 py-1 font-bold font-nepal text-xs rounded shadow-sm">+ TICKET</button></div>${state.flights.length === 0 ? '<div class="text-center font-hand text-xl opacity-50 py-4">No flights added.</div>' : ''}${state.flights.map((f, i) => `<div class="relative group mb-4 p-4 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#252525]"><button onclick="deleteFlight(${i})" class="absolute top-2 right-2 text-red-800 font-bold hover:scale-110">x</button><div class="flex justify-between items-end border-b border-gray-300 dark:border-gray-600 pb-2 mb-2"><div><div class="font-nepal text-xs text-gray-500">DEPART</div><div class="font-nepal text-3xl text-[#2c1810] dark:text-white">${f.from}</div></div><div class="text-center"><div class="font-mono text-xs text-[#7b1113] dark:text-[#ffb300]">${f.time}</div><i data-lucide="plane" class="text-[#ffb300]" size="24"></i></div><div class="text-right"><div class="font-nepal text-xs text-gray-500">ARRIVE</div><div class="font-nepal text-3xl text-[#2c1810] dark:text-white">${f.to}</div></div></div><div class="grid grid-cols-4 gap-2 font-mono text-xs text-[#7b1113] dark:text-[#ffb300]"><span>AIR: ${f.airline}</span><span>FL: ${f.no}</span><span>GT: ${f.gate || '-'}</span><span>ST: ${f.seat || '-'}</span></div></div>`).join('')}</div><div class="absolute left-6 top-0 bottom-0 w-1 bg-[#ffb300] dark:bg-[#7b1113]"></div>`;
-            for(let i=1; i<=state.settings.duration; i++){ const k=`Day ${i}`; if(!state.itinerary[k])state.itinerary[k]=[]; h+=`<div class="relative pl-10"><div class="absolute left-[-9px] top-0 w-5 h-5 bg-[#7b1113] dark:bg-[#ffb300] rotate-45 border-2 border-[#ffb300] dark:border-[#7b1113] z-10"></div><div class="himalayan-card p-5 mb-6"><div class="flex justify-between items-center border-b border-[#dcdcdc] dark:border-gray-700 pb-2 mb-3"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300] font-bold">${k}</span><button onclick="addActivity('${k}')" class="text-xs border border-gray-400 px-2 rounded">+ Event</button></div><div class="space-y-3">${state.itinerary[k].map((a,x)=>`<div class="flex gap-4 font-serif text-[#2c1810] dark:text-gray-300 items-center group"><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300] bg-[#f9f7f2] dark:bg-[#333] px-2 border border-gray-300 dark:border-gray-600">${a.time}</span><span class="flex-1 text-lg border-b border-dotted border-gray-400 dark:border-gray-600">${a.text}</span><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.text)}" target="_blank" class="text-[#ffb300] hover:text-[#7b1113]"><i data-lucide="map-pin" size="16"></i></a><button onclick="deleteActivity('${k}',${x})" class="text-gray-400 opacity-50 hover:text-red-800"><i data-lucide="x" size="14"></i></button></div>`).join('')}</div></div></div>`; } c.innerHTML=h+`</div>`;
+        function addPackItem(cat) { const name = document.getElementById(`add-${cat}-name`).value; if(!name) return; const container = document.getElementById(`assign-${cat}`); const assigned = []; Array.from(container.children).forEach(btn => { if(btn.classList.contains('bg-[#7b1113]')) assigned.push(btn.getAttribute('data-user')); }); if(assigned.length === 0) assigned.push('Yukti','Rejith','Neha'); 
+            state.packing[cat].push({ id: uid(), updatedAt: Date.now(), name, assigned, completed: [] }); persist(); 
         }
-        function saveFlight() { const getVal = (id) => document.getElementById(id) ? document.getElementById(id).value : ''; const f = { from: getVal('f-from'), to: getVal('f-to'), airline: getVal('f-airline'), no: getVal('f-no'), time: getVal('f-time'), term: getVal('f-term'), gate: getVal('f-gate'), seat: getVal('f-seat') }; if(f.from){ if(!state.flights) state.flights = []; state.flights.push(f); closeModal('flight-modal'); saveData(); } }
+        function togglePack(cat, itemId, person) { 
+            const item = state.packing[cat].find(i => i.id === itemId); 
+            if(item) {
+                if(!item.completed) item.completed=[]; 
+                if(item.completed.includes(person)) item.completed = item.completed.filter(p => p !== person); else item.completed.push(person); 
+                item.updatedAt = Date.now();
+                persist(); 
+            }
+        }
+        function deletePackItem(cat, itemId) { state.packing[cat] = state.packing[cat].filter(i => i.id !== itemId); persist(); }
+        function addPackingCategory() { const name = prompt("List Name:"); if(name && !state.packing[name]) { state.packing[name] = []; persist(); } }
+        function deletePackingCategory(cat) { if(confirm('Delete "'+cat+'"?')) { delete state.packing[cat]; persist(); } }
 
-        // --- WALLET ---
+        // PLANNER
+        function renderPlanner(c) {
+            let h = `<div class="fade-in max-w-4xl mx-auto space-y-8 pl-6 relative pb-24"><div class="himalayan-card p-6 relative mb-8"><div class="flex justify-between items-center mb-4 border-b border-[#dcdcdc] dark:border-gray-700 pb-2"><h2 class="font-nepal text-2xl text-[#7b1113] dark:text-[#ffb300] tracking-widest">Flight Deck</h2><button onclick="openModal('flight-modal')" class="bg-[#263238] dark:bg-[#ffb300] text-[#ffb300] dark:text-black px-3 py-1 font-bold font-nepal text-xs rounded shadow-sm">+ TICKET</button></div>${state.flights.length === 0 ? '<div class="text-center font-hand text-xl opacity-50 py-4">No flights added.</div>' : ''}${state.flights.map((f) => `<div class="relative group mb-4 p-4 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#252525]"><button onclick="deleteFlight('${f.id}')" class="absolute top-2 right-2 text-red-800 font-bold hover:scale-110">x</button><div class="flex justify-between items-end border-b border-gray-300 dark:border-gray-600 pb-2 mb-2"><div><div class="font-nepal text-xs text-gray-500">DEPART</div><div class="font-nepal text-3xl text-[#2c1810] dark:text-white">${f.from}</div></div><div class="text-center"><div class="font-mono text-xs text-[#7b1113] dark:text-[#ffb300]">${f.time}</div><i data-lucide="plane" class="text-[#ffb300]" size="24"></i></div><div class="text-right"><div class="font-nepal text-xs text-gray-500">ARRIVE</div><div class="font-nepal text-3xl text-[#2c1810] dark:text-white">${f.to}</div></div></div><div class="grid grid-cols-4 gap-2 font-mono text-xs text-[#7b1113] dark:text-[#ffb300]"><span>AIR: ${f.airline}</span><span>FL: ${f.no}</span><span>GT: ${f.gate || '-'}</span><span>ST: ${f.seat || '-'}</span></div></div>`).join('')}</div><div class="absolute left-6 top-0 bottom-0 w-1 bg-[#ffb300] dark:bg-[#7b1113]"></div>`;
+            for(let i=1; i<=state.settings.duration; i++){ const k=`Day ${i}`; if(!state.itinerary[k])state.itinerary[k]=[]; h+=`<div class="relative pl-10"><div class="absolute left-[-9px] top-0 w-5 h-5 bg-[#7b1113] dark:bg-[#ffb300] rotate-45 border-2 border-[#ffb300] dark:border-[#7b1113] z-10"></div><div class="himalayan-card p-5 mb-6"><div class="flex justify-between items-center border-b border-[#dcdcdc] dark:border-gray-700 pb-2 mb-3"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300] font-bold">${k}</span><button onclick="addActivity('${k}')" class="text-xs border border-gray-400 px-2 rounded">+ Event</button></div><div class="space-y-3">${state.itinerary[k].map((a)=>`<div class="flex gap-4 font-serif text-[#2c1810] dark:text-gray-300 items-center group"><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300] bg-[#f9f7f2] dark:bg-[#333] px-2 border border-gray-300 dark:border-gray-600">${a.time}</span><span class="flex-1 text-lg border-b border-dotted border-gray-400 dark:border-gray-600">${a.text}</span><button onclick="deleteActivity('${k}','${a.id}')" class="text-gray-400 opacity-50 hover:text-red-800"><i data-lucide="x" size="14"></i></button></div>`).join('')}</div></div></div>`; } c.innerHTML=h+`</div>`;
+        }
+        function saveFlight() { const getVal = (id) => document.getElementById(id) ? document.getElementById(id).value : ''; const f = { id: uid(), updatedAt: Date.now(), from: getVal('f-from'), to: getVal('f-to'), airline: getVal('f-airline'), no: getVal('f-no'), time: getVal('f-time'), term: getVal('f-term'), gate: getVal('f-gate'), seat: getVal('f-seat') }; if(f.from){ state.flights.push(f); closeModal('flight-modal'); persist(); } }
+        function deleteFlight(id) { if(confirm('Del?')){ state.flights = state.flights.filter(f => f.id !== id); persist(); } }
+        function addActivity(day) { const t=prompt("Activity:"); if(t){ state.itinerary[day].push({ id: uid(), updatedAt: Date.now(), time:prompt("Time:","12:00"), text:t }); state.itinerary[day].sort((a,b)=>a.time.localeCompare(b.time)); persist(); } }
+        function deleteActivity(day, id) { state.itinerary[day] = state.itinerary[day].filter(i => i.id !== id); persist(); }
+
+        // WALLET
         function renderWallet(c) {
             let {settlements} = calculateSettlements();
             let totalINR = state.expenses.reduce((s,i) => { let amt = i.currency === 'NPR' ? i.total / 1.6 : i.total; return s + amt; }, 0);
             let myShare = state.expenses.reduce((s,i) => { let amt = i.currency === 'NPR' ? i.total / 1.6 : i.total; let myPortion = i.split[currentUser] || 0; if(i.currency === 'NPR') myPortion = myPortion / 1.6; return s + myPortion; }, 0);
-            let h = `<div class="fade-in max-w-3xl mx-auto space-y-8 pb-24"><div class="bg-[#f9f7f2] dark:bg-[#1e1e1e] p-3 rounded border border-[#dcdcdc] dark:border-gray-600 flex justify-between items-center text-sm shadow-sm"><div class="flex gap-2 items-center"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">₹ INR</span><input id="calc-inr" type="number" class="w-16 bg-white border p-1" oninput="convert('inr')"></div><i data-lucide="arrow-right-left" size="14" class="text-gray-400"></i><div class="flex gap-2 items-center"><input id="calc-npr" type="number" class="w-16 bg-white border p-1" oninput="convert('npr')"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">NPR</span></div></div><div class="bg-[#263238] border-b-4 border-[#ffb300] p-8 rounded shadow-lg relative overflow-hidden"><div class="relative z-10 flex justify-between items-center text-[#ffb300]"><div><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">TOTAL SPENT (INR)</div><div class="font-nepal text-5xl">₹${Math.round(totalINR)}</div></div><div class="text-right"><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">YOUR SHARE</div><div class="font-nepal text-3xl">₹${Math.round(myShare)}</div></div></div><button onclick="openModal('wallet-modal')" class="w-full mt-6 bg-[#ffb300] text-[#263238] py-3 font-bold font-nepal hover:bg-white transition-colors rounded">ADD EXPENSE</button></div><div class="himalayan-card p-6 relative mt-6"><div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#7b1113] dark:bg-[#ffb300] text-white dark:text-black px-4 py-1 font-nepal text-xs uppercase rounded">Settlement</div><div class="space-y-2 font-serif italic text-gray-700 dark:text-gray-300 text-center mt-4">${settlements.length===0?'<div class="opacity-50">Balanced.</div>':settlements.map(s=>`<div class="flex justify-between border-b border-dashed border-gray-300 pb-1"><span>${s.split('₹')[0]}</span><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300]">₹${s.split('₹')[1]}</span></div>`).join('')}</div></div><div class="space-y-4">${state.expenses.length === 0 ? '<div class="text-center opacity-50 py-4">No expenses recorded yet.</div>' : state.expenses.map((e,i)=>`<div class="himalayan-card p-4 flex justify-between items-center"><div><div class="font-serif text-xl font-bold">${e.item} <span class="text-xs font-normal text-gray-500">(${e.currency||'INR'})</span></div><div class="text-xs font-nepal text-gray-400 uppercase tracking-widest">${e.paidBy} Paid</div></div><div class="flex items-center gap-4"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300]">${(e.currency==='NPR'?'Np ':'₹') + e.total}</span><button onclick="deleteExpense(${i})" class="text-gray-400 hover:text-red-800"><i data-lucide="trash-2" size="16"></i></button></div></div>`).join('')}</div></div>`; c.innerHTML = h;
+            let h = `<div class="fade-in max-w-3xl mx-auto space-y-8 pb-24"><div class="bg-[#f9f7f2] dark:bg-[#1e1e1e] p-3 rounded border border-[#dcdcdc] dark:border-gray-600 flex justify-between items-center text-sm shadow-sm"><div class="flex gap-2 items-center"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">₹ INR</span><input id="calc-inr" type="number" class="w-16 bg-white border p-1" oninput="convert('inr')"></div><i data-lucide="arrow-right-left" size="14" class="text-gray-400"></i><div class="flex gap-2 items-center"><input id="calc-npr" type="number" class="w-16 bg-white border p-1" oninput="convert('npr')"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">NPR</span></div></div><div class="bg-[#263238] border-b-4 border-[#ffb300] p-8 rounded shadow-lg relative overflow-hidden"><div class="relative z-10 flex justify-between items-center text-[#ffb300]"><div><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">TOTAL SPENT (INR)</div><div class="font-nepal text-5xl">₹${Math.round(totalINR)}</div></div><div class="text-right"><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">YOUR SHARE</div><div class="font-nepal text-3xl">₹${Math.round(myShare)}</div></div></div><button onclick="openModal('wallet-modal')" class="w-full mt-6 bg-[#ffb300] text-[#263238] py-3 font-bold font-nepal hover:bg-white transition-colors rounded">ADD EXPENSE</button></div><div class="himalayan-card p-6 relative mt-6"><div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#7b1113] dark:bg-[#ffb300] text-white dark:text-black px-4 py-1 font-nepal text-xs uppercase rounded">Settlement</div><div class="space-y-2 font-serif italic text-gray-700 dark:text-gray-300 text-center mt-4">${settlements.length===0?'<div class="opacity-50">Balanced.</div>':settlements.map(s=>`<div class="flex justify-between border-b border-dashed border-gray-300 pb-1"><span>${s.split('₹')[0]}</span><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300]">₹${s.split('₹')[1]}</span></div>`).join('')}</div></div><div class="space-y-4">${state.expenses.length === 0 ? '<div class="text-center opacity-50 py-4">No expenses recorded yet.</div>' : state.expenses.map((e)=>`<div class="himalayan-card p-4 flex justify-between items-center"><div><div class="font-serif text-xl font-bold">${e.item} <span class="text-xs font-normal text-gray-500">(${e.currency||'INR'})</span></div><div class="text-xs font-nepal text-gray-400 uppercase tracking-widest">${e.paidBy} Paid</div></div><div class="flex items-center gap-4"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300]">${(e.currency==='NPR'?'Np ':'₹') + e.total}</span><button onclick="deleteExpense('${e.id}')" class="text-gray-400 hover:text-red-800"><i data-lucide="trash-2" size="16"></i></button></div></div>`).join('')}</div></div>`; c.innerHTML = h;
         }
         function calculateSettlements() { let b={'Yukti':0,'Rejith':0,'Neha':0}; state.expenses.forEach(e => { let factor = e.currency === 'NPR' ? 1.6 : 1; let paidINR = e.total / factor; b[e.paidBy] += paidINR; if(e.split) Object.entries(e.split).forEach(([p,a]) => { b[p] -= (a / factor); }); }); let d=[],c=[]; Object.entries(b).forEach(([p,a])=>{if(a<-1)d.push({p,a}); if(a>1)c.push({p,a})}); let s=[]; let i=0,j=0; while(i<d.length && j<c.length){ let amt=Math.min(Math.abs(d[i].a),c[j].a); s.push(`${d[i].p} pays ${c[j].p} ₹${Math.round(amt)}`); d[i].a+=amt; c[j].a-=amt; if(Math.abs(d[i].a)<1)i++; if(c[j].a<1)j++; } return {balances:b, settlements:s}; }
-        function saveExpense() { const item=document.getElementById('w-item').value, currency=document.getElementById('w-currency').value, y=parseFloat(document.getElementById('amt-yukti').value)||0, r=parseFloat(document.getElementById('amt-rejith').value)||0, n=parseFloat(document.getElementById('amt-neha').value)||0, total=y+r+n; if(item&&total>0){ state.expenses.unshift({id:Date.now(), item, total, currency, paidBy:tempPayer, split:{'Yukti':y,'Rejith':r,'Neha':n}}); closeModal('wallet-modal'); saveData(); } }
+        function saveExpense() { const item=document.getElementById('w-item').value, currency=document.getElementById('w-currency').value, y=parseFloat(document.getElementById('amt-yukti').value)||0, r=parseFloat(document.getElementById('amt-rejith').value)||0, n=parseFloat(document.getElementById('amt-neha').value)||0, total=y+r+n; if(item&&total>0){ state.expenses.unshift({id:uid(), updatedAt: Date.now(), item, total, currency, paidBy:tempPayer, split:{'Yukti':y,'Rejith':r,'Neha':n}}); closeModal('wallet-modal'); persist(); } }
+        function deleteExpense(id) { state.expenses = state.expenses.filter(e => e.id !== id); persist(); }
 
-        // --- BOOK ---
+        // EXPLORE & SIDEBAR & UTILS
+        function renderExplore(c) { let h=`<div class="fade-in grid md:grid-cols-2 gap-8 pb-24">`; for(const [k,v] of Object.entries(state.explore)){h+=`<div class="himalayan-card p-6"><div class="flex justify-between border-b border-gray-300 dark:border-gray-600 pb-2 mb-4"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300] uppercase tracking-widest">${k}</span></div><div class="space-y-3">${v.map((x,i)=>`<div class="flex items-center gap-3 border-b border-dashed border-gray-200 dark:border-gray-700 pb-2"><div onclick="toggleItem('explore','${k}','${x.id}')" class="w-6 h-6 border-2 border-gray-400 flex items-center justify-center cursor-pointer">${x.done?'<i data-lucide="check" class="text-[#178a3d]" size="14"></i>':''}</div><span class="${x.done?'line-through opacity-50':''} flex-1 font-serif text-xl">${x.name}</span><button onclick="deleteExploreItem('${k}','${x.id}')" class="text-gray-400 hover:text-red-800">x</button></div>`).join('')}<input onkeydown="if(event.key==='Enter')addItem(this,'explore','${k}')" placeholder="+ Add..." class="w-full bg-transparent font-hand text-xl p-2 outline-none"></div></div>`;} c.innerHTML=h+`</div>`; }
+        function addItem(input, type, cat) { if(input.value.trim()){ state[type][cat].push({ id: uid(), updatedAt: Date.now(), name:input.value, done:false }); persist(); } }
+        function toggleItem(type, cat, id) { const i = state[type][cat].find(x => x.id === id); if(i) { i.done = !i.done; i.updatedAt = Date.now(); persist(); } }
+        function deleteExploreItem(cat, id) { state.explore[cat] = state.explore[cat].filter(i => i.id !== id); persist(); }
+        
+        function renderSidebar() { let h=`<div class="p-6 border-b border-gray-300 dark:border-gray-700 mb-6 text-center"><div class="font-nepal text-sm uppercase tracking-widest text-[#2c1810] dark:text-[#ccc]">Current Scribe</div><div class="font-hand text-4xl text-[#7b1113] dark:text-[#ffb300] font-bold">${currentUser}</div></div>`; h+= `<div class="mb-6"><label class="font-nepal text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Portraits</label><div class="flex gap-2"><input onblur="updatePhotoLink(this.value)" value="${state.photoAlbum||''}" placeholder="Paste Link..." class="flex-1 bg-white border border-gray-300 dark:border-gray-600 p-1 font-mono text-xs"><a href="${state.photoAlbum}" target="_blank" class="text-[#7b1113] hover:text-[#ffb300]"><i data-lucide="image" size="18"></i></a></div></div>`; h+= `<div class="mb-6 h-96 flex flex-col"><label class="font-nepal text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Quick Notes</label><textarea id="scratchpad-area" onblur="updateScratchpad(this.value)" class="charcoal-notes flex-1 w-full resize-none outline-none shadow-inner border border-gray-400 dark:border-gray-700 rounded-sm" placeholder="Scribble here...">${state.scratchpad||''}</textarea></div>`; document.getElementById('sidebar-content').innerHTML = h; updateUserUI(); lucide.createIcons(); }
         function renderScrapbook(c) {
             if (!isBookOpen) { c.innerHTML = `<div class="fade-in flex flex-col items-center justify-center h-[600px]"><div class="adventure-book" onclick="isBookOpen=true; refreshUI()"><div class="adventure-map"></div><div class="adventure-title" style="font-family:'Karma'; font-weight:bold; color:#eec; font-size:20px; text-shadow:2px 2px 0 #000;">JOURNAL</div><div class="book-clasp"><i data-lucide="lock" color="#3e2723" size="16"></i></div></div></div>`; } 
             else {
@@ -480,33 +602,23 @@
                 c.innerHTML = `<div class="fade-in flex flex-col items-center justify-center h-full min-h-[600px] gap-6 relative"><div class="flex gap-4 p-2 bg-[#263238] dark:bg-[#0a0a0a] rounded-full border border-[#ffb300] dark:border-[#7b1113] shadow-2xl mb-4 sticky top-0 z-50"><button onclick="if(currentSpreadIndex>0){currentSpreadIndex-=2;refreshUI()}" class="text-[#ffb300] hover:text-white px-2"><i data-lucide="arrow-left" size="20"></i></button><button onclick="addScrapbookPage()" class="bg-[#ffb300] text-[#263238] px-3 py-1 font-bold rounded-full text-xs hover:bg-white">NEW PAGE</button><button onclick="currentSpreadIndex+=2;refreshUI()" class="text-[#ffb300] hover:text-white px-2"><i data-lucide="arrow-right" size="20"></i></button><div class="w-px h-6 bg-gray-600 mx-1"></div><button onclick="deleteSpread()" class="text-red-400 hover:text-red-300"><i data-lucide="trash-2" size="18"></i></button><button onclick="isBookOpen=false;refreshUI()" class="text-gray-400 hover:text-white ml-2"><i data-lucide="x" size="20"></i></button></div><div class="book-spread"><div class="book-spine"></div><div class="book-page left"><div class="font-nepal text-center text-[#7b1113] border-b border-gray-300 pb-2 mb-4 text-xs" contenteditable="true" onblur="updateTitle(${currentSpreadIndex},this.innerText)">${l.title}</div><div class="font-hand text-2xl h-full outline-none" contenteditable="true" onblur="updateScrapbook(${currentSpreadIndex},this.innerHTML)">${l.content}</div></div><div class="book-page right"><div class="font-nepal text-center text-[#7b1113] border-b border-gray-300 pb-2 mb-4 text-xs" contenteditable="true" onblur="updateTitle(${currentSpreadIndex+1},this.innerText)">${r.title}</div><div class="font-hand text-2xl h-full outline-none" contenteditable="true" onblur="updateScrapbook(${currentSpreadIndex+1},this.innerHTML)">${r.content}</div></div></div><div class="h-24"></div></div>`;
             }
         }
-        function addScrapbookPage() { state.scrapbook.push({title: 'New Page', content: ''}); state.scrapbook.push({title: 'Notes', content: ''}); currentSpreadIndex = state.scrapbook.length - 2; saveData(); refreshUI(); }
-        function deleteSpread() { if (confirm("Delete these pages?")) { if(state.scrapbook.length > 2) { state.scrapbook.splice(currentSpreadIndex, 2); if(currentSpreadIndex >= state.scrapbook.length) currentSpreadIndex -= 2; saveData(); refreshUI(); } else { alert("Cannot delete the last spread!"); } } }
-        
-        function renderExplore(c) { let h=`<div class="fade-in grid md:grid-cols-2 gap-8 pb-24">`; for(const [k,v] of Object.entries(state.explore)){h+=`<div class="himalayan-card p-6"><div class="flex justify-between border-b border-gray-300 dark:border-gray-600 pb-2 mb-4"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300] uppercase tracking-widest">${k}</span></div><div class="space-y-3">${v.map((x,i)=>`<div class="flex items-center gap-3 border-b border-dashed border-gray-200 dark:border-gray-700 pb-2"><div onclick="toggleItem('explore','${k}',${i})" class="w-6 h-6 border-2 border-gray-400 flex items-center justify-center cursor-pointer">${x.done?'<i data-lucide="check" class="text-[#178a3d]" size="14"></i>':''}</div><span class="${x.done?'line-through opacity-50':''} flex-1 font-serif text-xl">${x.name}</span><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(x.name)}" target="_blank" class="text-[#ffb300] hover:text-[#7b1113]"><i data-lucide="map-pin"></i></a><button onclick="deleteItem('explore','${k}',${i})" class="text-gray-400 hover:text-red-800">x</button></div>`).join('')}<input onkeydown="if(event.key==='Enter')addItem(this,'explore','${k}')" placeholder="+ Add..." class="w-full bg-transparent font-hand text-xl p-2 outline-none"></div></div>`;} c.innerHTML=h+`</div>`; }
-        function renderSidebar() { let h=`<div class="p-6 border-b border-gray-300 dark:border-gray-700 mb-6 text-center"><div class="font-nepal text-sm uppercase tracking-widest text-[#2c1810] dark:text-[#ccc]">Current Scribe</div><div class="font-hand text-4xl text-[#7b1113] dark:text-[#ffb300] font-bold">${currentUser}</div></div>`; h+= `<div class="mb-6"><label class="font-nepal text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Portraits</label><div class="flex gap-2"><input onblur="updatePhotoLink(this.value)" value="${state.photoAlbum||''}" placeholder="Paste Link..." class="flex-1 bg-white border border-gray-300 dark:border-gray-600 p-1 font-mono text-xs"><a href="${state.photoAlbum}" target="_blank" class="text-[#7b1113] hover:text-[#ffb300]"><i data-lucide="image" size="18"></i></a></div></div>`; h+= `<div class="mb-6 h-96 flex flex-col"><label class="font-nepal text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Quick Notes</label><textarea id="scratchpad-area" onblur="updateScratchpad(this.value)" class="charcoal-notes flex-1 w-full resize-none outline-none shadow-inner border border-gray-400 dark:border-gray-700 rounded-sm" placeholder="Scribble here...">${state.scratchpad||''}</textarea></div>`; document.getElementById('sidebar-content').innerHTML = h; updateUserUI(); lucide.createIcons(); }
-        function convert(t) { const i=document.getElementById('calc-inr'), n=document.getElementById('calc-npr'); if(t==='inr') n.value=(i.value*1.6).toFixed(0); else i.value=(n.value/1.6).toFixed(0); }
-        function updateScrapbook(idx, html) { state.scrapbook[idx].content = html; saveData(); }
-        function updateTitle(idx, text) { state.scrapbook[idx].title = text; saveData(); }
-        function updateScratchpad(val) { state.scratchpad = val; saveData(); }
-        function updatePhotoLink(val) { state.photoAlbum=val; saveData(); renderSidebar(); }
+        function addScrapbookPage() { state.scrapbook.push({title: 'New Page', content: ''}); state.scrapbook.push({title: 'Notes', content: ''}); currentSpreadIndex = state.scrapbook.length - 2; persist(); }
+        function deleteSpread() { if (confirm("Delete these pages?")) { if(state.scrapbook.length > 2) { state.scrapbook.splice(currentSpreadIndex, 2); if(currentSpreadIndex >= state.scrapbook.length) currentSpreadIndex -= 2; persist(); } else { alert("Cannot delete the last spread!"); } } }
+        function updateScrapbook(idx, html) { state.scrapbook[idx].content = html; persist(); }
+        function updateTitle(idx, text) { state.scrapbook[idx].title = text; persist(); }
+        function updateScratchpad(val) { state.scratchpad = val; persist(); }
+        function updatePhotoLink(val) { state.photoAlbum=val; persist(); renderSidebar(); }
         function updateUserUI() { USERS.forEach(u => { const btn = document.getElementById(`btn-${u}`); if(btn) { if(u === currentUser) btn.className = "px-2 py-1 text-[10px] font-nepal uppercase text-[#ffb300] border-b border-[#ffb300]"; else btn.className = "px-2 py-1 text-[10px] font-nepal uppercase text-gray-400 hover:text-[#ffb300]"; } }); }
         function switchUser(u) { currentUser = u; localStorage.setItem('trio_user', u); updateUserUI(); if(document.getElementById('d-nav-wallet').classList.contains('active')) refreshUI(); }
-        function deleteExpense(idx) { state.expenses.splice(idx,1); saveData(); }
-        function addPackingCategory() { const name = prompt("List Name:"); if(name && !state.packing[name]) { state.packing[name] = []; saveData(); } }
-        function deletePackingCategory(cat) { if(confirm('Delete "'+cat+'"?')) { delete state.packing[cat]; saveData(); } }
-        function deleteFlight(idx) { if(confirm('Del?')){state.flights.splice(idx,1); saveData(); refreshUI();} }
-        function deleteActivity(dayKey, index) { if(state.itinerary[dayKey]) { state.itinerary[dayKey].splice(index, 1); saveData(); refreshUI(); } }
-        function addActivity(day) { const t=prompt("Activity:"); if(t){ state.itinerary[day].push({time:prompt("Time:","12:00"),text:t}); state.itinerary[day].sort((a,b)=>a.time.localeCompare(b.time)); saveData(); refreshUI(); } }
-        function toggleItem(type, cat, idx) { state[type][cat][idx].done = !state[type][cat][idx].done; saveData(); }
-        function addItem(input, type, cat) { if(input.value.trim()){state[type][cat].push({name:input.value, done:false}); saveData();} }
-        function deleteItem(type, cat, idx) { state[type][cat].splice(idx,1); saveData(); }
-        function updateCountdown() { const d=Math.ceil((new Date(state.settings.startDate)-new Date())/86400000); document.getElementById('countdown-display').innerText = d>0?`${d} Days`: "Trip!"; }
-        function toggleSidebar() { const s=document.getElementById('sidebar'); s.classList.toggle('translate-x-full'); s.classList.toggle('hidden'); if(window.innerWidth>=768) s.classList.remove('hidden'); }
+        function convert(t) { const i=document.getElementById('calc-inr'), n=document.getElementById('calc-npr'); if(t==='inr') n.value=(i.value*1.6).toFixed(0); else i.value=(n.value/1.6).toFixed(0); }
+        function toggleTheme() { document.documentElement.classList.toggle('dark'); const isDark = document.documentElement.classList.contains('dark'); localStorage.setItem('theme', isDark ? 'dark' : 'light'); updateThemeIcon(); }
+        function updateThemeIcon() { const isDark = document.documentElement.classList.contains('dark'); const icon = document.getElementById('theme-icon'); if(icon) { icon.parentElement.innerHTML = `<i id="theme-icon" data-lucide="${isDark ? 'sun' : 'moon'}" size="18"></i>`; lucide.createIcons(); } }
         function openModal(id){document.getElementById(id).classList.remove('hidden'); if(id==='wallet-modal'){tempPayer=currentUser; updatePayerUI(document.querySelectorAll('.payer-opt')[USERS.indexOf(currentUser)]);}}
         function closeModal(id){document.getElementById(id).classList.add('hidden');}
         function updatePayerUI(b){document.querySelectorAll('.payer-opt').forEach(x=>x.classList.remove('bg-[#7b1113]','text-white')); if(b)b.classList.add('bg-[#7b1113]','text-white');}
     </script>
+
 </body>
 </html>
+
 
