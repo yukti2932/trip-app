@@ -121,7 +121,7 @@
             <button onclick="renderTab('explore')" id="d-nav-explore" class="nav-btn">MAPS</button>
             <button onclick="renderTab('packing')" id="d-nav-packing" class="nav-btn">TRUNK</button>
             <button onclick="renderTab('wallet')" id="d-nav-wallet" class="nav-btn">TREASURY</button>
-            <button onclick="renderTab('memories')" id="d-nav-memories" class="nav-btn text-[#ffb300] font-bold">CHRONICLES</button>
+            <!--<button onclick="renderTab('memories')" id="d-nav-memories" class="nav-btn text-[#ffb300] font-bold">CHRONICLES</button>-->
             <button onclick="toggleSidebar()" class="absolute right-6 text-[#ffb300] hover:scale-110 transition-transform"><i data-lucide="scroll-text"></i></button>
         </div>
     </div>
@@ -144,7 +144,7 @@
         <button onclick="renderTab('explore')" class="text-gray-400 hover:text-[#ffb300]"><i data-lucide="compass"></i></button>
         <button onclick="renderTab('packing')" class="text-gray-400 hover:text-[#ffb300]"><i data-lucide="backpack"></i></button>
         <button onclick="renderTab('wallet')" class="text-gray-400 hover:text-[#ffb300]"><i data-lucide="coins"></i></button>
-        <button onclick="renderTab('memories')" class="text-[#ffb300]"><i data-lucide="book-open"></i></button>
+        <!--<button onclick="renderTab('memories')" class="text-[#ffb300]"><i data-lucide="book-open"></i></button>-->
         <button onclick="toggleSidebar()" class="text-gray-400 border-l border-gray-600 pl-3"><i data-lucide="menu"></i></button>
     </nav>
 
@@ -594,18 +594,8 @@
         function deleteExploreItem(cat, id) { state.explore[cat] = state.explore[cat].filter(i => i.id !== id); persist(); }
         
         function renderSidebar() { let h=`<div class="p-6 border-b border-gray-300 dark:border-gray-700 mb-6 text-center"><div class="font-nepal text-sm uppercase tracking-widest text-[#2c1810] dark:text-[#ccc]">Current Scribe</div><div class="font-hand text-4xl text-[#7b1113] dark:text-[#ffb300] font-bold">${currentUser}</div></div>`; h+= `<div class="mb-6"><label class="font-nepal text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Portraits</label><div class="flex gap-2"><input onblur="updatePhotoLink(this.value)" value="${state.photoAlbum||''}" placeholder="Paste Link..." class="flex-1 bg-white border border-gray-300 dark:border-gray-600 p-1 font-mono text-xs"><a href="${state.photoAlbum}" target="_blank" class="text-[#7b1113] hover:text-[#ffb300]"><i data-lucide="image" size="18"></i></a></div></div>`; h+= `<div class="mb-6 h-96 flex flex-col"><label class="font-nepal text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Quick Notes</label><textarea id="scratchpad-area" onblur="updateScratchpad(this.value)" class="charcoal-notes flex-1 w-full resize-none outline-none shadow-inner border border-gray-400 dark:border-gray-700 rounded-sm" placeholder="Scribble here...">${state.scratchpad||''}</textarea></div>`; document.getElementById('sidebar-content').innerHTML = h; updateUserUI(); lucide.createIcons(); }
-        function renderScrapbook(c) {
-            if (!isBookOpen) { c.innerHTML = `<div class="fade-in flex flex-col items-center justify-center h-[600px]"><div class="adventure-book" onclick="isBookOpen=true; refreshUI()"><div class="adventure-map"></div><div class="adventure-title" style="font-family:'Karma'; font-weight:bold; color:#eec; font-size:20px; text-shadow:2px 2px 0 #000;">JOURNAL</div><div class="book-clasp"><i data-lucide="lock" color="#3e2723" size="16"></i></div></div></div>`; } 
-            else {
-                while(state.scrapbook.length <= currentSpreadIndex+1) state.scrapbook.push({title:'New', content:''});
-                const l=state.scrapbook[currentSpreadIndex], r=state.scrapbook[currentSpreadIndex+1];
-                c.innerHTML = `<div class="fade-in flex flex-col items-center justify-center h-full min-h-[600px] gap-6 relative"><div class="flex gap-4 p-2 bg-[#263238] dark:bg-[#0a0a0a] rounded-full border border-[#ffb300] dark:border-[#7b1113] shadow-2xl mb-4 sticky top-0 z-50"><button onclick="if(currentSpreadIndex>0){currentSpreadIndex-=2;refreshUI()}" class="text-[#ffb300] hover:text-white px-2"><i data-lucide="arrow-left" size="20"></i></button><button onclick="addScrapbookPage()" class="bg-[#ffb300] text-[#263238] px-3 py-1 font-bold rounded-full text-xs hover:bg-white">NEW PAGE</button><button onclick="currentSpreadIndex+=2;refreshUI()" class="text-[#ffb300] hover:text-white px-2"><i data-lucide="arrow-right" size="20"></i></button><div class="w-px h-6 bg-gray-600 mx-1"></div><button onclick="deleteSpread()" class="text-red-400 hover:text-red-300"><i data-lucide="trash-2" size="18"></i></button><button onclick="isBookOpen=false;refreshUI()" class="text-gray-400 hover:text-white ml-2"><i data-lucide="x" size="20"></i></button></div><div class="book-spread"><div class="book-spine"></div><div class="book-page left"><div class="font-nepal text-center text-[#7b1113] border-b border-gray-300 pb-2 mb-4 text-xs" contenteditable="true" onblur="updateTitle(${currentSpreadIndex},this.innerText)">${l.title}</div><div class="font-hand text-2xl h-full outline-none" contenteditable="true" onblur="updateScrapbook(${currentSpreadIndex},this.innerHTML)">${l.content}</div></div><div class="book-page right"><div class="font-nepal text-center text-[#7b1113] border-b border-gray-300 pb-2 mb-4 text-xs" contenteditable="true" onblur="updateTitle(${currentSpreadIndex+1},this.innerText)">${r.title}</div><div class="font-hand text-2xl h-full outline-none" contenteditable="true" onblur="updateScrapbook(${currentSpreadIndex+1},this.innerHTML)">${r.content}</div></div></div><div class="h-24"></div></div>`;
-            }
-        }
-        function addScrapbookPage() { state.scrapbook.push({title: 'New Page', content: ''}); state.scrapbook.push({title: 'Notes', content: ''}); currentSpreadIndex = state.scrapbook.length - 2; persist(); }
-        function deleteSpread() { if (confirm("Delete these pages?")) { if(state.scrapbook.length > 2) { state.scrapbook.splice(currentSpreadIndex, 2); if(currentSpreadIndex >= state.scrapbook.length) currentSpreadIndex -= 2; persist(); } else { alert("Cannot delete the last spread!"); } } }
-        function updateScrapbook(idx, html) { state.scrapbook[idx].content = html; persist(); }
-        function updateTitle(idx, text) { state.scrapbook[idx].title = text; persist(); }
+      
+        
         function updateScratchpad(val) { state.scratchpad = val; persist(); }
         function updatePhotoLink(val) { state.photoAlbum=val; persist(); renderSidebar(); }
         function updateUserUI() { USERS.forEach(u => { const btn = document.getElementById(`btn-${u}`); if(btn) { if(u === currentUser) btn.className = "px-2 py-1 text-[10px] font-nepal uppercase text-[#ffb300] border-b border-[#ffb300]"; else btn.className = "px-2 py-1 text-[10px] font-nepal uppercase text-gray-400 hover:text-[#ffb300]"; } }); }
@@ -620,5 +610,6 @@
 
 </body>
 </html>
+
 
 
