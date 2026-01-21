@@ -151,12 +151,47 @@
     <div id="wallet-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 fade-in">
         <div class="himalayan-card w-full max-w-md p-6">
             <h3 class="font-nepal font-bold text-xl mb-4 text-[#7b1113] dark:text-[#ffb300] border-b border-[#dcdcdc] dark:border-gray-700 pb-2">Add Expense</h3>
+
+<input id="w-item" type="text" placeholder="Item Name" class="w-full bg-transparent border-b border-[#7b1113] dark:border-[#ffb300] p-2 font-hand text-xl outline-none mb-3">
+
+<div class="flex gap-3 mb-4 items-end">
+    <input id="w-total" type="number" placeholder="Total Amount" class="flex-1 bg-transparent border-b border-[#7b1113] dark:border-[#ffb300] p-1 font-mono text-lg outline-none">
+    <select id="w-currency" class="bg-gray-100 border border-gray-300 p-1 text-xs font-bold rounded h-8">
+        <option value="INR">INR (₹)</option>
+        <option value="NPR">NPR (Np)</option>
+    </select>
+</div>
+
+<div class="flex items-center gap-2 mb-2"><div class="text-xs font-nepal text-gray-500 uppercase">Paid By:</div></div>
+<div class="grid grid-cols-3 gap-2 mb-4">
+    <button onclick="tempPayer='Yukti'; updatePayerUI(this)" class="payer-opt border border-gray-300 p-2 rounded text-xs font-bold uppercase">Yukti</button>
+    <button onclick="tempPayer='Rejith'; updatePayerUI(this)" class="payer-opt border border-gray-300 p-2 rounded text-xs font-bold uppercase">Rejith</button>
+    <button onclick="tempPayer='Neha'; updatePayerUI(this)" class="payer-opt border border-gray-300 p-2 rounded text-xs font-bold uppercase">Neha</button>
+</div>
+
+<div class="bg-gray-50 dark:bg-[#121212] p-3 border border-dashed border-gray-300 dark:border-gray-700 mb-6 rounded text-sm">
+    <div class="flex justify-between mb-2">
+        <span class="font-nepal uppercase text-gray-500 text-xs">Split</span>
+        <button onclick="splitEvenly()" class="text-xs font-bold text-[#7b1113] dark:text-[#ffb300] underline">Split Evenly</button>
+    </div>
+    <div class="space-y-2 font-mono">
+        <div class="flex gap-2 items-center"><span>Y:</span><input id="amt-yukti" type="number" class="w-full bg-transparent border-b border-gray-300 text-center"></div>
+        <div class="flex gap-2 items-center"><span>R:</span><input id="amt-rejith" type="number" class="w-full bg-transparent border-b border-gray-300 text-center"></div>
+        <div class="flex gap-2 items-center"><span>N:</span><input id="amt-neha" type="number" class="w-full bg-transparent border-b border-gray-300 text-center"></div>
+    </div>
+</div>
+
+<div class="flex gap-3">
+    <button onclick="closeModal('wallet-modal')" class="flex-1 py-2 font-nepal text-gray-500">Cancel</button>
+    <button onclick="saveExpense()" class="flex-1 py-2 bg-[#7b1113] dark:bg-[#ffb300] text-white dark:text-black font-nepal font-bold shadow-lg rounded">Confirm</button>
+</div>
+         <!-- <h3 class="font-nepal font-bold text-xl mb-4 text-[#7b1113] dark:text-[#ffb300] border-b border-[#dcdcdc] dark:border-gray-700 pb-2">Add Expense</h3>
             <input id="w-item" type="text" placeholder="Item Name" class="w-full bg-transparent border-b border-[#7b1113] dark:border-[#ffb300] p-2 font-hand text-xl outline-none mb-3">
             <div class="flex items-center gap-4 mb-4"><select id="w-currency" class="bg-gray-100 border border-gray-300 p-1 text-xs font-bold rounded"><option value="INR">INR (₹)</option><option value="NPR">NPR (Np)</option></select><div class="text-xs font-nepal text-gray-500 uppercase">Paid By</div></div>
             <div class="grid grid-cols-3 gap-2 mb-4"><button onclick="tempPayer='Yukti'; updatePayerUI(this)" class="payer-opt border border-gray-300 p-2 rounded text-xs font-bold uppercase">Yukti</button><button onclick="tempPayer='Rejith'; updatePayerUI(this)" class="payer-opt border border-gray-300 p-2 rounded text-xs font-bold uppercase">Rejith</button><button onclick="tempPayer='Neha'; updatePayerUI(this)" class="payer-opt border border-gray-300 p-2 rounded text-xs font-bold uppercase">Neha</button></div>
             <div class="bg-gray-50 dark:bg-[#121212] p-3 border border-dashed border-gray-300 dark:border-gray-700 mb-6 rounded text-sm"><div class="flex justify-between mb-2"><span class="font-nepal uppercase text-gray-500 text-xs">Split</span><button onclick="splitEvenly()" class="text-xs font-bold text-[#7b1113] dark:text-[#ffb300] underline">Split Evenly</button></div><div class="space-y-2 font-mono"><div class="flex gap-2 items-center"><span>Y:</span><input id="amt-yukti" type="number" class="w-full bg-transparent border-b border-gray-300 text-center"></div><div class="flex gap-2 items-center"><span>R:</span><input id="amt-rejith" type="number" class="w-full bg-transparent border-b border-gray-300 text-center"></div><div class="flex gap-2 items-center"><span>N:</span><input id="amt-neha" type="number" class="w-full bg-transparent border-b border-gray-300 text-center"></div></div></div>
             <div class="flex gap-3"><button onclick="closeModal('wallet-modal')" class="flex-1 py-2 font-nepal text-gray-500">Cancel</button><button onclick="saveExpense()" class="flex-1 py-2 bg-[#7b1113] dark:bg-[#ffb300] text-white dark:text-black font-nepal font-bold shadow-lg rounded">Confirm</button></div>
-        </div>
+        </div> -->
     </div>
     <div id="flight-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 fade-in">
         <div class="himalayan-card w-full max-w-md p-6">
@@ -529,16 +564,22 @@
         }
 
         // --- UI & FEATURES ---
+
+        // --- UI & FEATURES (UPDATED FOR SOFT DELETE) ---
         
         function refreshUI() { const active = document.querySelector('.nav-btn.active')?.id.replace('d-nav-', '') || 'planner'; renderTab(active); renderSidebar(); }
-        function renderTab(tabName) { document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active', 'text-[#ffb300]')); const dBtn = document.getElementById(`d-nav-${tabName}`); if(dBtn) dBtn.classList.add('active', 'text-[#ffb300]'); const container = document.getElementById('app-container'); container.innerHTML = ''; if(tabName === 'planner') renderPlanner(container); if(tabName === 'explore') renderExplore(container); if(tabName === 'packing') renderPacking(container); if(tabName === 'wallet') renderWallet(container); if(tabName === 'memories') renderScrapbook(container); lucide.createIcons(); }
+        function renderTab(tabName) { document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active', 'text-[#ffb300]')); const dBtn = document.getElementById(`d-nav-${tabName}`); if(dBtn) dBtn.classList.add('active', 'text-[#ffb300]'); const container = document.getElementById('app-container'); container.innerHTML = ''; if(tabName === 'planner') renderPlanner(container); if(tabName === 'explore') renderExplore(container); if(tabName === 'packing') renderPacking(container); if(tabName === 'wallet') renderWallet(container); lucide.createIcons(); }
 
-        // PACKING
+        // PACKING (TRUNK)
         function renderPacking(c) {
             let h = `<div class="fade-in grid grid-cols-1 md:grid-cols-2 gap-6 pb-24">`;
             for(const [cat, items] of Object.entries(state.packing)) {
+                // Filter out deleted items before rendering
+                const activeItems = items.filter(i => !i.deleted);
+                
                 h += `<div class="himalayan-card p-4"><div class="flex justify-between border-b border-gray-300 dark:border-gray-600 pb-2 mb-3"><span class="font-nepal font-bold text-[#7b1113] dark:text-[#ffb300] uppercase tracking-wider">${cat}</span><button onclick="deletePackingCategory('${cat}')" class="text-gray-400 hover:text-red-500">x</button></div><div class="space-y-2">`;
-                items.forEach((item, idx) => {
+                
+                activeItems.forEach((item) => {
                     const assigned = item.assigned || ['Yukti','Rejith','Neha'];
                     const completed = item.completed || [];
                     h += `<div class="flex items-center gap-2 border-b border-dashed border-gray-200 dark:border-gray-700 pb-1"><span class="flex-1 font-serif text-lg">${item.name}</span><div class="flex gap-1">`;
@@ -551,7 +592,7 @@
             c.innerHTML = h;
         }
         function addPackItem(cat) { const name = document.getElementById(`add-${cat}-name`).value; if(!name) return; const container = document.getElementById(`assign-${cat}`); const assigned = []; Array.from(container.children).forEach(btn => { if(btn.classList.contains('bg-[#7b1113]')) assigned.push(btn.getAttribute('data-user')); }); if(assigned.length === 0) assigned.push('Yukti','Rejith','Neha'); 
-            state.packing[cat].push({ id: uid(), updatedAt: Date.now(), name, assigned, completed: [] }); persist(); 
+            state.packing[cat].push({ id: uid(), updatedAt: Date.now(), name, assigned, completed: [], deleted: false }); persist(); 
         }
         function togglePack(cat, itemId, person) { 
             const item = state.packing[cat].find(i => i.id === itemId); 
@@ -562,39 +603,98 @@
                 persist(); 
             }
         }
-        function deletePackItem(cat, itemId) { state.packing[cat] = state.packing[cat].filter(i => i.id !== itemId); persist(); }
+        function deletePackItem(cat, itemId) { 
+            const item = state.packing[cat].find(i => i.id === itemId);
+            if (item) {
+                item.deleted = true;      // Soft Delete
+                item.updatedAt = Date.now(); // Update timestamp so Cloud accepts it
+                persist(); 
+            }
+        }
         function addPackingCategory() { const name = prompt("List Name:"); if(name && !state.packing[name]) { state.packing[name] = []; persist(); } }
         function deletePackingCategory(cat) { if(confirm('Delete "'+cat+'"?')) { delete state.packing[cat]; persist(); } }
 
-        // PLANNER
+        // PLANNER (ITINERARY + FLIGHTS)
         function renderPlanner(c) {
-            let h = `<div class="fade-in max-w-4xl mx-auto space-y-8 pl-6 relative pb-24"><div class="himalayan-card p-6 relative mb-8"><div class="flex justify-between items-center mb-4 border-b border-[#dcdcdc] dark:border-gray-700 pb-2"><h2 class="font-nepal text-2xl text-[#7b1113] dark:text-[#ffb300] tracking-widest">Flight Deck</h2><button onclick="openModal('flight-modal')" class="bg-[#263238] dark:bg-[#ffb300] text-[#ffb300] dark:text-black px-3 py-1 font-bold font-nepal text-xs rounded shadow-sm">+ TICKET</button></div>${state.flights.length === 0 ? '<div class="text-center font-hand text-xl opacity-50 py-4">No flights added.</div>' : ''}${state.flights.map((f) => `<div class="relative group mb-4 p-4 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#252525]"><button onclick="deleteFlight('${f.id}')" class="absolute top-2 right-2 text-red-800 font-bold hover:scale-110">x</button><div class="flex justify-between items-end border-b border-gray-300 dark:border-gray-600 pb-2 mb-2"><div><div class="font-nepal text-xs text-gray-500">DEPART</div><div class="font-nepal text-3xl text-[#2c1810] dark:text-white">${f.from}</div></div><div class="text-center"><div class="font-mono text-xs text-[#7b1113] dark:text-[#ffb300]">${f.time}</div><i data-lucide="plane" class="text-[#ffb300]" size="24"></i></div><div class="text-right"><div class="font-nepal text-xs text-gray-500">ARRIVE</div><div class="font-nepal text-3xl text-[#2c1810] dark:text-white">${f.to}</div></div></div><div class="grid grid-cols-4 gap-2 font-mono text-xs text-[#7b1113] dark:text-[#ffb300]"><span>AIR: ${f.airline}</span><span>FL: ${f.no}</span><span>GT: ${f.gate || '-'}</span><span>ST: ${f.seat || '-'}</span></div></div>`).join('')}</div><div class="absolute left-6 top-0 bottom-0 w-1 bg-[#ffb300] dark:bg-[#7b1113]"></div>`;
-            for(let i=1; i<=state.settings.duration; i++){ const k=`Day ${i}`; if(!state.itinerary[k])state.itinerary[k]=[]; h+=`<div class="relative pl-10"><div class="absolute left-[-9px] top-0 w-5 h-5 bg-[#7b1113] dark:bg-[#ffb300] rotate-45 border-2 border-[#ffb300] dark:border-[#7b1113] z-10"></div><div class="himalayan-card p-5 mb-6"><div class="flex justify-between items-center border-b border-[#dcdcdc] dark:border-gray-700 pb-2 mb-3"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300] font-bold">${k}</span><button onclick="addActivity('${k}')" class="text-xs border border-gray-400 px-2 rounded">+ Event</button></div><div class="space-y-3">${state.itinerary[k].map((a)=>`<div class="flex gap-4 font-serif text-[#2c1810] dark:text-gray-300 items-center group"><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300] bg-[#f9f7f2] dark:bg-[#333] px-2 border border-gray-300 dark:border-gray-600">${a.time}</span><span class="flex-1 text-lg border-b border-dotted border-gray-400 dark:border-gray-600">${a.text}</span><button onclick="deleteActivity('${k}','${a.id}')" class="text-gray-400 opacity-50 hover:text-red-800"><i data-lucide="x" size="14"></i></button></div>`).join('')}</div></div></div>`; } c.innerHTML=h+`</div>`;
+            // Filter flights
+            const activeFlights = state.flights.filter(f => !f.deleted);
+            
+            let h = `<div class="fade-in max-w-4xl mx-auto space-y-8 pl-6 relative pb-24"><div class="himalayan-card p-6 relative mb-8"><div class="flex justify-between items-center mb-4 border-b border-[#dcdcdc] dark:border-gray-700 pb-2"><h2 class="font-nepal text-2xl text-[#7b1113] dark:text-[#ffb300] tracking-widest">Flight Deck</h2><button onclick="openModal('flight-modal')" class="bg-[#263238] dark:bg-[#ffb300] text-[#ffb300] dark:text-black px-3 py-1 font-bold font-nepal text-xs rounded shadow-sm">+ TICKET</button></div>${activeFlights.length === 0 ? '<div class="text-center font-hand text-xl opacity-50 py-4">No flights added.</div>' : ''}${activeFlights.map((f) => `<div class="relative group mb-4 p-4 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#252525]"><button onclick="deleteFlight('${f.id}')" class="absolute top-2 right-2 text-red-800 font-bold hover:scale-110">x</button><div class="flex justify-between items-end border-b border-gray-300 dark:border-gray-600 pb-2 mb-2"><div><div class="font-nepal text-xs text-gray-500">DEPART</div><div class="font-nepal text-3xl text-[#2c1810] dark:text-white">${f.from}</div></div><div class="text-center"><div class="font-mono text-xs text-[#7b1113] dark:text-[#ffb300]">${f.time}</div><i data-lucide="plane" class="text-[#ffb300]" size="24"></i></div><div class="text-right"><div class="font-nepal text-xs text-gray-500">ARRIVE</div><div class="font-nepal text-3xl text-[#2c1810] dark:text-white">${f.to}</div></div></div><div class="grid grid-cols-4 gap-2 font-mono text-xs text-[#7b1113] dark:text-[#ffb300]"><span>AIR: ${f.airline}</span><span>FL: ${f.no}</span><span>GT: ${f.gate || '-'}</span><span>ST: ${f.seat || '-'}</span></div></div>`).join('')}</div><div class="absolute left-6 top-0 bottom-0 w-1 bg-[#ffb300] dark:bg-[#7b1113]"></div>`;
+            for(let i=1; i<=state.settings.duration; i++){ const k=`Day ${i}`; if(!state.itinerary[k])state.itinerary[k]=[]; 
+            // Filter activities
+            const activeActs = state.itinerary[k].filter(a => !a.deleted);
+            
+            h+=`<div class="relative pl-10"><div class="absolute left-[-9px] top-0 w-5 h-5 bg-[#7b1113] dark:bg-[#ffb300] rotate-45 border-2 border-[#ffb300] dark:border-[#7b1113] z-10"></div><div class="himalayan-card p-5 mb-6"><div class="flex justify-between items-center border-b border-[#dcdcdc] dark:border-gray-700 pb-2 mb-3"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300] font-bold">${k}</span><button onclick="addActivity('${k}')" class="text-xs border border-gray-400 px-2 rounded">+ Event</button></div><div class="space-y-3">${activeActs.map((a)=>`<div class="flex gap-4 font-serif text-[#2c1810] dark:text-gray-300 items-center group"><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300] bg-[#f9f7f2] dark:bg-[#333] px-2 border border-gray-300 dark:border-gray-600">${a.time}</span><span class="flex-1 text-lg border-b border-dotted border-gray-400 dark:border-gray-600">${a.text}</span><button onclick="deleteActivity('${k}','${a.id}')" class="text-gray-400 opacity-50 hover:text-red-800"><i data-lucide="x" size="14"></i></button></div>`).join('')}</div></div></div>`; } c.innerHTML=h+`</div>`;
         }
-        function saveFlight() { const getVal = (id) => document.getElementById(id) ? document.getElementById(id).value : ''; const f = { id: uid(), updatedAt: Date.now(), from: getVal('f-from'), to: getVal('f-to'), airline: getVal('f-airline'), no: getVal('f-no'), time: getVal('f-time'), term: getVal('f-term'), gate: getVal('f-gate'), seat: getVal('f-seat') }; if(f.from){ state.flights.push(f); closeModal('flight-modal'); persist(); } }
-        function deleteFlight(id) { if(confirm('Del?')){ state.flights = state.flights.filter(f => f.id !== id); persist(); } }
-        function addActivity(day) { const t=prompt("Activity:"); if(t){ state.itinerary[day].push({ id: uid(), updatedAt: Date.now(), time:prompt("Time:","12:00"), text:t }); state.itinerary[day].sort((a,b)=>a.time.localeCompare(b.time)); persist(); } }
-        function deleteActivity(day, id) { state.itinerary[day] = state.itinerary[day].filter(i => i.id !== id); persist(); }
+        function saveFlight() { const getVal = (id) => document.getElementById(id) ? document.getElementById(id).value : ''; const f = { id: uid(), updatedAt: Date.now(), from: getVal('f-from'), to: getVal('f-to'), airline: getVal('f-airline'), no: getVal('f-no'), time: getVal('f-time'), term: getVal('f-term'), gate: getVal('f-gate'), seat: getVal('f-seat'), deleted: false }; if(f.from){ state.flights.push(f); closeModal('flight-modal'); persist(); } }
+        function deleteFlight(id) { 
+            const f = state.flights.find(x => x.id === id); 
+            if(f && confirm('Delete Flight?')){ f.deleted = true; f.updatedAt = Date.now(); persist(); } 
+        }
+        function addActivity(day) { const t=prompt("Activity:"); if(t){ state.itinerary[day].push({ id: uid(), updatedAt: Date.now(), time:prompt("Time:","12:00"), text:t, deleted: false }); state.itinerary[day].sort((a,b)=>a.time.localeCompare(b.time)); persist(); } }
+        function deleteActivity(day, id) { 
+            const i = state.itinerary[day].find(x => x.id === id);
+            if(i) { i.deleted = true; i.updatedAt = Date.now(); persist(); }
+        }
 
-        // WALLET
+        // WALLET (TREASURY)
         function renderWallet(c) {
-            let {settlements} = calculateSettlements();
-            let totalINR = state.expenses.reduce((s,i) => { let amt = i.currency === 'NPR' ? i.total / 1.6 : i.total; return s + amt; }, 0);
-            let myShare = state.expenses.reduce((s,i) => { let amt = i.currency === 'NPR' ? i.total / 1.6 : i.total; let myPortion = i.split[currentUser] || 0; if(i.currency === 'NPR') myPortion = myPortion / 1.6; return s + myPortion; }, 0);
-            let h = `<div class="fade-in max-w-3xl mx-auto space-y-8 pb-24"><div class="bg-[#f9f7f2] dark:bg-[#1e1e1e] p-3 rounded border border-[#dcdcdc] dark:border-gray-600 flex justify-between items-center text-sm shadow-sm"><div class="flex gap-2 items-center"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">₹ INR</span><input id="calc-inr" type="number" class="w-16 bg-white border p-1" oninput="convert('inr')"></div><i data-lucide="arrow-right-left" size="14" class="text-gray-400"></i><div class="flex gap-2 items-center"><input id="calc-npr" type="number" class="w-16 bg-white border p-1" oninput="convert('npr')"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">NPR</span></div></div><div class="bg-[#263238] border-b-4 border-[#ffb300] p-8 rounded shadow-lg relative overflow-hidden"><div class="relative z-10 flex justify-between items-center text-[#ffb300]"><div><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">TOTAL SPENT (INR)</div><div class="font-nepal text-5xl">₹${Math.round(totalINR)}</div></div><div class="text-right"><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">YOUR SHARE</div><div class="font-nepal text-3xl">₹${Math.round(myShare)}</div></div></div><button onclick="openModal('wallet-modal')" class="w-full mt-6 bg-[#ffb300] text-[#263238] py-3 font-bold font-nepal hover:bg-white transition-colors rounded">ADD EXPENSE</button></div><div class="himalayan-card p-6 relative mt-6"><div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#7b1113] dark:bg-[#ffb300] text-white dark:text-black px-4 py-1 font-nepal text-xs uppercase rounded">Settlement</div><div class="space-y-2 font-serif italic text-gray-700 dark:text-gray-300 text-center mt-4">${settlements.length===0?'<div class="opacity-50">Balanced.</div>':settlements.map(s=>`<div class="flex justify-between border-b border-dashed border-gray-300 pb-1"><span>${s.split('₹')[0]}</span><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300]">₹${s.split('₹')[1]}</span></div>`).join('')}</div></div><div class="space-y-4">${state.expenses.length === 0 ? '<div class="text-center opacity-50 py-4">No expenses recorded yet.</div>' : state.expenses.map((e)=>`<div class="himalayan-card p-4 flex justify-between items-center"><div><div class="font-serif text-xl font-bold">${e.item} <span class="text-xs font-normal text-gray-500">(${e.currency||'INR'})</span></div><div class="text-xs font-nepal text-gray-400 uppercase tracking-widest">${e.paidBy} Paid</div></div><div class="flex items-center gap-4"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300]">${(e.currency==='NPR'?'Np ':'₹') + e.total}</span><button onclick="deleteExpense('${e.id}')" class="text-gray-400 hover:text-red-800"><i data-lucide="trash-2" size="16"></i></button></div></div>`).join('')}</div></div>`; c.innerHTML = h;
+            // Filter expenses
+            const activeExpenses = state.expenses.filter(e => !e.deleted);
+            
+            let {settlements} = calculateSettlements(activeExpenses);
+            let totalINR = activeExpenses.reduce((s,i) => { let amt = i.currency === 'NPR' ? i.total / 1.6 : i.total; return s + amt; }, 0);
+            let myShare = activeExpenses.reduce((s,i) => { let amt = i.currency === 'NPR' ? i.total / 1.6 : i.total; let myPortion = i.split[currentUser] || 0; if(i.currency === 'NPR') myPortion = myPortion / 1.6; return s + myPortion; }, 0);
+            let h = `<div class="fade-in max-w-3xl mx-auto space-y-8 pb-24"><div class="bg-[#f9f7f2] dark:bg-[#1e1e1e] p-3 rounded border border-[#dcdcdc] dark:border-gray-600 flex justify-between items-center text-sm shadow-sm"><div class="flex gap-2 items-center"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">₹ INR</span><input id="calc-inr" type="number" class="w-16 bg-white border p-1" oninput="convert('inr')"></div><i data-lucide="arrow-right-left" size="14" class="text-gray-400"></i><div class="flex gap-2 items-center"><input id="calc-npr" type="number" class="w-16 bg-white border p-1" oninput="convert('npr')"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">NPR</span></div></div><div class="bg-[#263238] border-b-4 border-[#ffb300] p-8 rounded shadow-lg relative overflow-hidden"><div class="relative z-10 flex justify-between items-center text-[#ffb300]"><div><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">TOTAL SPENT (INR)</div><div class="font-nepal text-5xl">₹${Math.round(totalINR)}</div></div><div class="text-right"><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">YOUR SHARE</div><div class="font-nepal text-3xl">₹${Math.round(myShare)}</div></div></div><button onclick="openModal('wallet-modal')" class="w-full mt-6 bg-[#ffb300] text-[#263238] py-3 font-bold font-nepal hover:bg-white transition-colors rounded">ADD EXPENSE</button></div><div class="himalayan-card p-6 relative mt-6"><div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#7b1113] dark:bg-[#ffb300] text-white dark:text-black px-4 py-1 font-nepal text-xs uppercase rounded">Settlement</div><div class="space-y-2 font-serif italic text-gray-700 dark:text-gray-300 text-center mt-4">${settlements.length===0?'<div class="opacity-50">Balanced.</div>':settlements.map(s=>`<div class="flex justify-between border-b border-dashed border-gray-300 pb-1"><span>${s.split('₹')[0]}</span><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300]">₹${s.split('₹')[1]}</span></div>`).join('')}</div></div><div class="space-y-4">${activeExpenses.length === 0 ? '<div class="text-center opacity-50 py-4">No expenses recorded yet.</div>' : activeExpenses.map((e)=>`<div class="himalayan-card p-4 flex justify-between items-center"><div><div class="font-serif text-xl font-bold">${e.item} <span class="text-xs font-normal text-gray-500">(${e.currency||'INR'})</span></div><div class="text-xs font-nepal text-gray-400 uppercase tracking-widest">${e.paidBy} Paid</div></div><div class="flex items-center gap-4"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300]">${(e.currency==='NPR'?'Np ':'₹') + e.total}</span><button onclick="deleteExpense('${e.id}')" class="text-gray-400 hover:text-red-800"><i data-lucide="trash-2" size="16"></i></button></div></div>`).join('')}</div></div>`; c.innerHTML = h;
         }
-        function calculateSettlements() { let b={'Yukti':0,'Rejith':0,'Neha':0}; state.expenses.forEach(e => { let factor = e.currency === 'NPR' ? 1.6 : 1; let paidINR = e.total / factor; b[e.paidBy] += paidINR; if(e.split) Object.entries(e.split).forEach(([p,a]) => { b[p] -= (a / factor); }); }); let d=[],c=[]; Object.entries(b).forEach(([p,a])=>{if(a<-1)d.push({p,a}); if(a>1)c.push({p,a})}); let s=[]; let i=0,j=0; while(i<d.length && j<c.length){ let amt=Math.min(Math.abs(d[i].a),c[j].a); s.push(`${d[i].p} pays ${c[j].p} ₹${Math.round(amt)}`); d[i].a+=amt; c[j].a-=amt; if(Math.abs(d[i].a)<1)i++; if(c[j].a<1)j++; } return {balances:b, settlements:s}; }
-        function saveExpense() { const item=document.getElementById('w-item').value, currency=document.getElementById('w-currency').value, y=parseFloat(document.getElementById('amt-yukti').value)||0, r=parseFloat(document.getElementById('amt-rejith').value)||0, n=parseFloat(document.getElementById('amt-neha').value)||0, total=y+r+n; if(item&&total>0){ state.expenses.unshift({id:uid(), updatedAt: Date.now(), item, total, currency, paidBy:tempPayer, split:{'Yukti':y,'Rejith':r,'Neha':n}}); closeModal('wallet-modal'); persist(); } }
-        function deleteExpense(id) { state.expenses = state.expenses.filter(e => e.id !== id); persist(); }
+        function calculateSettlements(expenses) { let b={'Yukti':0,'Rejith':0,'Neha':0}; expenses.forEach(e => { let factor = e.currency === 'NPR' ? 1.6 : 1; let paidINR = e.total / factor; b[e.paidBy] += paidINR; if(e.split) Object.entries(e.split).forEach(([p,a]) => { b[p] -= (a / factor); }); }); let d=[],c=[]; Object.entries(b).forEach(([p,a])=>{if(a<-1)d.push({p,a}); if(a>1)c.push({p,a})}); let s=[]; let i=0,j=0; while(i<d.length && j<c.length){ let amt=Math.min(Math.abs(d[i].a),c[j].a); s.push(`${d[i].p} pays ${c[j].p} ₹${Math.round(amt)}`); d[i].a+=amt; c[j].a-=amt; if(Math.abs(d[i].a)<1)i++; if(c[j].a<1)j++; } return {balances:b, settlements:s}; }
+        
+        function splitEvenly() {
+            const total = parseFloat(document.getElementById('w-total').value);
+            if (!total) return;
+            const share = (total / 3).toFixed(2);
+            document.getElementById('amt-yukti').value = share;
+            document.getElementById('amt-rejith').value = share;
+            document.getElementById('amt-neha').value = share;
+        }
+        function saveExpense() {
+            const item = document.getElementById('w-item').value;
+            const currency = document.getElementById('w-currency').value;
+            const totalInput = parseFloat(document.getElementById('w-total').value) || 0;
+            let y = parseFloat(document.getElementById('amt-yukti').value) || 0;
+            let r = parseFloat(document.getElementById('amt-rejith').value) || 0;
+            let n = parseFloat(document.getElementById('amt-neha').value) || 0;
+            if ((y + r + n) === 0 && totalInput > 0) { y = totalInput / 3; r = totalInput / 3; n = totalInput / 3; }
+            const total = y + r + n;
+            if(item && total > 0){
+                state.expenses.unshift({ id: uid(), updatedAt: Date.now(), item, total, currency, paidBy: tempPayer, split: {'Yukti':y, 'Rejith':r, 'Neha':n}, deleted: false });
+                document.getElementById('w-item').value = ''; document.getElementById('w-total').value = ''; document.getElementById('amt-yukti').value = ''; document.getElementById('amt-rejith').value = ''; document.getElementById('amt-neha').value = '';
+                closeModal('wallet-modal'); persist();
+            }
+        }
+        function deleteExpense(id) { 
+            const e = state.expenses.find(x => x.id === id);
+            if(e) { e.deleted = true; e.updatedAt = Date.now(); persist(); }
+        }
 
-        // EXPLORE & SIDEBAR & UTILS
-        function renderExplore(c) { let h=`<div class="fade-in grid md:grid-cols-2 gap-8 pb-24">`; for(const [k,v] of Object.entries(state.explore)){h+=`<div class="himalayan-card p-6"><div class="flex justify-between border-b border-gray-300 dark:border-gray-600 pb-2 mb-4"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300] uppercase tracking-widest">${k}</span></div><div class="space-y-3">${v.map((x,i)=>`<div class="flex items-center gap-3 border-b border-dashed border-gray-200 dark:border-gray-700 pb-2"><div onclick="toggleItem('explore','${k}','${x.id}')" class="w-6 h-6 border-2 border-gray-400 flex items-center justify-center cursor-pointer">${x.done?'<i data-lucide="check" class="text-[#178a3d]" size="14"></i>':''}</div><span class="${x.done?'line-through opacity-50':''} flex-1 font-serif text-xl">${x.name}</span><button onclick="deleteExploreItem('${k}','${x.id}')" class="text-gray-400 hover:text-red-800">x</button></div>`).join('')}<input onkeydown="if(event.key==='Enter')addItem(this,'explore','${k}')" placeholder="+ Add..." class="w-full bg-transparent font-hand text-xl p-2 outline-none"></div></div>`;} c.innerHTML=h+`</div>`; }
-        function addItem(input, type, cat) { if(input.value.trim()){ state[type][cat].push({ id: uid(), updatedAt: Date.now(), name:input.value, done:false }); persist(); } }
+        // EXPLORE & SIDEBAR & UTILS (MAPS)
+        function renderExplore(c) { 
+            let h=`<div class="fade-in grid md:grid-cols-2 gap-8 pb-24">`; 
+            for(const [k,v] of Object.entries(state.explore)){
+                // Filter deleted map items
+                const activeMapItems = v.filter(x => !x.deleted);
+                
+                h+=`<div class="himalayan-card p-6"><div class="flex justify-between border-b border-gray-300 dark:border-gray-600 pb-2 mb-4"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300] uppercase tracking-widest">${k}</span></div><div class="space-y-3">${activeMapItems.map((x,i)=>`<div class="flex items-center gap-3 border-b border-dashed border-gray-200 dark:border-gray-700 pb-2"><div onclick="toggleItem('explore','${k}','${x.id}')" class="w-6 h-6 border-2 border-gray-400 flex items-center justify-center cursor-pointer">${x.done?'<i data-lucide="check" class="text-[#178a3d]" size="14"></i>':''}</div><span class="${x.done?'line-through opacity-50':''} flex-1 font-serif text-xl">${x.name}</span><button onclick="deleteExploreItem('${k}','${x.id}')" class="text-gray-400 hover:text-red-800">x</button></div>`).join('')}<input onkeydown="if(event.key==='Enter')addItem(this,'explore','${k}')" placeholder="+ Add..." class="w-full bg-transparent font-hand text-xl p-2 outline-none"></div></div>`;
+            } c.innerHTML=h+`</div>`; 
+        }
+        function addItem(input, type, cat) { if(input.value.trim()){ state[type][cat].push({ id: uid(), updatedAt: Date.now(), name:input.value, done:false, deleted: false }); persist(); } }
         function toggleItem(type, cat, id) { const i = state[type][cat].find(x => x.id === id); if(i) { i.done = !i.done; i.updatedAt = Date.now(); persist(); } }
-        function deleteExploreItem(cat, id) { state.explore[cat] = state.explore[cat].filter(i => i.id !== id); persist(); }
+        function deleteExploreItem(cat, id) { 
+            const item = state.explore[cat].find(i => i.id === id);
+            if(item) { item.deleted = true; item.updatedAt = Date.now(); persist(); }
+        }
         
         function renderSidebar() { let h=`<div class="p-6 border-b border-gray-300 dark:border-gray-700 mb-6 text-center"><div class="font-nepal text-sm uppercase tracking-widest text-[#2c1810] dark:text-[#ccc]">Current Scribe</div><div class="font-hand text-4xl text-[#7b1113] dark:text-[#ffb300] font-bold">${currentUser}</div></div>`; h+= `<div class="mb-6"><label class="font-nepal text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Portraits</label><div class="flex gap-2"><input onblur="updatePhotoLink(this.value)" value="${state.photoAlbum||''}" placeholder="Paste Link..." class="flex-1 bg-white border border-gray-300 dark:border-gray-600 p-1 font-mono text-xs"><a href="${state.photoAlbum}" target="_blank" class="text-[#7b1113] hover:text-[#ffb300]"><i data-lucide="image" size="18"></i></a></div></div>`; h+= `<div class="mb-6 h-96 flex flex-col"><label class="font-nepal text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Quick Notes</label><textarea id="scratchpad-area" onblur="updateScratchpad(this.value)" class="charcoal-notes flex-1 w-full resize-none outline-none shadow-inner border border-gray-400 dark:border-gray-700 rounded-sm" placeholder="Scribble here...">${state.scratchpad||''}</textarea></div>`; document.getElementById('sidebar-content').innerHTML = h; updateUserUI(); lucide.createIcons(); }
-      
         
         function updateScratchpad(val) { state.scratchpad = val; persist(); }
         function updatePhotoLink(val) { state.photoAlbum=val; persist(); renderSidebar(); }
@@ -606,10 +706,12 @@
         function openModal(id){document.getElementById(id).classList.remove('hidden'); if(id==='wallet-modal'){tempPayer=currentUser; updatePayerUI(document.querySelectorAll('.payer-opt')[USERS.indexOf(currentUser)]);}}
         function closeModal(id){document.getElementById(id).classList.add('hidden');}
         function updatePayerUI(b){document.querySelectorAll('.payer-opt').forEach(x=>x.classList.remove('bg-[#7b1113]','text-white')); if(b)b.classList.add('bg-[#7b1113]','text-white');}
-    </script>
+        
+
 
 </body>
 </html>
+
 
 
 
