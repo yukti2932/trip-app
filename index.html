@@ -482,7 +482,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrioSync V35 - Day & Night</title>
+    <title>TrioSync V38 - Safe Mode</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -698,10 +698,12 @@
             registerSW();
             const localData = localStorage.getItem('trip_smart_data');
             if (localData) {
-                state = JSON.parse(localData);
-                ensureIDs(); 
-                refreshUI();
+                try {
+                    state = JSON.parse(localData);
+                    ensureIDs(); 
+                } catch(e) { console.error("Corrupt local data", e); }
             }
+            refreshUI();
             syncLoop();
             setInterval(syncLoop, 4000); 
             if(localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
@@ -800,11 +802,11 @@
         
         function ensureIDs() {
             const fix = (arr) => { if(arr) arr.forEach(i => { if(!i.id) i.id = uid(); if(!i.updatedAt) i.updatedAt = 0; }); };
-            fix(state.expenses);
-            fix(state.flights);
-            Object.values(state.packing).forEach(fix);
-            Object.values(state.explore).forEach(fix);
-            Object.values(state.itinerary).forEach(fix);
+            if(state.expenses) fix(state.expenses);
+            if(state.flights) fix(state.flights);
+            if(state.packing) Object.values(state.packing).forEach(fix);
+            if(state.explore) Object.values(state.explore).forEach(fix);
+            if(state.itinerary) Object.values(state.itinerary).forEach(fix);
         }
 
         function persist() {
@@ -877,14 +879,36 @@
             }
         }
 
-        // WALLET
+        // WALLET - SAFE MODE
         function renderWallet(c) {
-            let {settlements} = calculateSettlements();
-            let totalINR = state.expenses.reduce((s,i) => { let amt = i.currency === 'NPR' ? i.total / 1.6 : i.total; return s + amt; }, 0);
-            let myShare = state.expenses.reduce((s,i) => { let amt = i.currency === 'NPR' ? i.total / 1.6 : i.total; let myPortion = i.split[currentUser] || 0; if(i.currency === 'NPR') myPortion = myPortion / 1.6; return s + myPortion; }, 0);
-            let h = `<div class="fade-in max-w-3xl mx-auto space-y-8 pb-24"><div class="bg-[#f9f7f2] dark:bg-[#1e1e1e] p-3 rounded border border-[#dcdcdc] dark:border-gray-600 flex justify-between items-center text-sm shadow-sm"><div class="flex gap-2 items-center"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">₹ INR</span><input id="calc-inr" type="number" class="w-16 bg-white border p-1" oninput="convert('inr')"></div><i data-lucide="arrow-right-left" size="14" class="text-gray-400"></i><div class="flex gap-2 items-center"><input id="calc-npr" type="number" class="w-16 bg-white border p-1" oninput="convert('npr')"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">NPR</span></div></div><div class="bg-[#263238] border-b-4 border-[#ffb300] p-8 rounded shadow-lg relative overflow-hidden"><div class="relative z-10 flex justify-between items-center text-[#ffb300]"><div><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">TOTAL SPENT (INR)</div><div class="font-nepal text-5xl">₹${Math.round(totalINR)}</div></div><div class="text-right"><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">YOUR SHARE</div><div class="font-nepal text-3xl">₹${Math.round(myShare)}</div></div></div><button onclick="openModal('wallet-modal')" class="w-full mt-6 bg-[#ffb300] text-[#263238] py-3 font-bold font-nepal hover:bg-white transition-colors rounded">ADD EXPENSE</button></div><div class="himalayan-card p-6 relative mt-6"><div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#7b1113] dark:bg-[#ffb300] text-white dark:text-black px-4 py-1 font-nepal text-xs uppercase rounded">Settlement</div><div class="space-y-2 font-serif italic text-gray-700 dark:text-gray-300 text-center mt-4">${settlements.length===0?'<div class="opacity-50">Balanced.</div>':settlements.map(s=>`<div class="flex justify-between border-b border-dashed border-gray-300 pb-1"><span>${s.split('₹')[0]}</span><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300]">₹${s.split('₹')[1]}</span></div>`).join('')}</div></div><div class="space-y-4">${state.expenses.length === 0 ? '<div class="text-center opacity-50 py-4">No expenses recorded yet.</div>' : state.expenses.map((e)=>`<div class="himalayan-card p-4 flex justify-between items-center"><div><div class="font-serif text-xl font-bold">${e.item} <span class="text-xs font-normal text-gray-500">(${e.currency||'INR'})</span></div><div class="text-xs font-nepal text-gray-400 uppercase tracking-widest">${e.paidBy} Paid</div></div><div class="flex items-center gap-4"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300]">${(e.currency==='NPR'?'Np ':'₹') + e.total}</span><button onclick="deleteExpense('${e.id}')" class="text-gray-400 hover:text-red-800"><i data-lucide="trash-2" size="16"></i></button></div></div>`).join('')}</div></div>`; c.innerHTML = h;
+            try {
+                let {settlements} = calculateSettlements();
+                // FIX: Added checks to ensure 'split' exists
+                let totalINR = state.expenses.reduce((s,i) => { let amt = i.currency === 'NPR' ? i.total / 1.6 : i.total; return s + amt; }, 0);
+                let myShare = state.expenses.reduce((s,i) => { 
+                    let amt = i.currency === 'NPR' ? i.total / 1.6 : i.total; 
+                    let myPortion = (i.split && i.split[currentUser]) ? i.split[currentUser] : 0; 
+                    if(i.currency === 'NPR') myPortion = myPortion / 1.6; 
+                    return s + myPortion; 
+                }, 0);
+                
+                let h = `<div class="fade-in max-w-3xl mx-auto space-y-8 pb-24"><div class="bg-[#f9f7f2] dark:bg-[#1e1e1e] p-3 rounded border border-[#dcdcdc] dark:border-gray-600 flex justify-between items-center text-sm shadow-sm"><div class="flex gap-2 items-center"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">₹ INR</span><input id="calc-inr" type="number" class="w-16 bg-white border p-1" oninput="convert('inr')"></div><i data-lucide="arrow-right-left" size="14" class="text-gray-400"></i><div class="flex gap-2 items-center"><input id="calc-npr" type="number" class="w-16 bg-white border p-1" oninput="convert('npr')"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">NPR</span></div></div><div class="bg-[#263238] border-b-4 border-[#ffb300] p-8 rounded shadow-lg relative overflow-hidden"><div class="relative z-10 flex justify-between items-center text-[#ffb300]"><div><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">TOTAL SPENT (INR)</div><div class="font-nepal text-5xl">₹${Math.round(totalINR)}</div></div><div class="text-right"><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">YOUR SHARE</div><div class="font-nepal text-3xl">₹${Math.round(myShare)}</div></div></div><button onclick="openModal('wallet-modal')" class="w-full mt-6 bg-[#ffb300] text-[#263238] py-3 font-bold font-nepal hover:bg-white transition-colors rounded">ADD EXPENSE</button></div><div class="himalayan-card p-6 relative mt-6"><div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#7b1113] dark:bg-[#ffb300] text-white dark:text-black px-4 py-1 font-nepal text-xs uppercase rounded">Settlement</div><div class="space-y-2 font-serif italic text-gray-700 dark:text-gray-300 text-center mt-4">${settlements.length===0?'<div class="opacity-50">Balanced.</div>':settlements.map(s=>`<div class="flex justify-between border-b border-dashed border-gray-300 pb-1"><span>${s.split('₹')[0]}</span><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300]">₹${s.split('₹')[1]}</span></div>`).join('')}</div></div><div class="space-y-4">${state.expenses.length === 0 ? '<div class="text-center opacity-50 py-4">No expenses recorded yet.</div>' : state.expenses.map((e)=>`<div class="himalayan-card p-4 flex justify-between items-center"><div><div class="font-serif text-xl font-bold">${e.item} <span class="text-xs font-normal text-gray-500">(${e.currency||'INR'})</span></div><div class="text-xs font-nepal text-gray-400 uppercase tracking-widest">${e.paidBy} Paid</div></div><div class="flex items-center gap-4"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300]">${(e.currency==='NPR'?'Np ':'₹') + e.total}</span><button onclick="deleteExpense('${e.id}')" class="text-gray-400 hover:text-red-800"><i data-lucide="trash-2" size="16"></i></button></div></div>`).join('')}</div></div>`; c.innerHTML = h;
+            } catch(e) {
+                c.innerHTML = `<div class="p-4 text-red-500">Error loading wallet: ${e.message}</div>`;
+                console.error(e);
+            }
         }
-        function calculateSettlements() { let b={'Yukti':0,'Rejith':0,'Neha':0}; state.expenses.forEach(e => { let factor = e.currency === 'NPR' ? 1.6 : 1; let paidINR = e.total / factor; b[e.paidBy] += paidINR; if(e.split) Object.entries(e.split).forEach(([p,a]) => { b[p] -= (a / factor); }); }); let d=[],c=[]; Object.entries(b).forEach(([p,a])=>{if(a<-1)d.push({p,a}); if(a>1)c.push({p,a})}); let s=[]; let i=0,j=0; while(i<d.length && j<c.length){ let amt=Math.min(Math.abs(d[i].a),c[j].a); s.push(`${d[i].p} pays ${c[j].p} ₹${Math.round(amt)}`); d[i].a+=amt; c[j].a-=amt; if(Math.abs(d[i].a)<1)i++; if(c[j].a<1)j++; } return {balances:b, settlements:s}; }
+        function calculateSettlements() { 
+            let b={'Yukti':0,'Rejith':0,'Neha':0}; 
+            state.expenses.forEach(e => { 
+                let factor = e.currency === 'NPR' ? 1.6 : 1; 
+                let paidINR = e.total / factor; 
+                b[e.paidBy] += paidINR; 
+                // FIX: Check if split exists
+                if(e.split) Object.entries(e.split).forEach(([p,a]) => { b[p] -= (a / factor); }); 
+            }); 
+            let d=[],c=[]; Object.entries(b).forEach(([p,a])=>{if(a<-1)d.push({p,a}); if(a>1)c.push({p,a})}); let s=[]; let i=0,j=0; while(i<d.length && j<c.length){ let amt=Math.min(Math.abs(d[i].a),c[j].a); s.push(`${d[i].p} pays ${c[j].p} ₹${Math.round(amt)}`); d[i].a+=amt; c[j].a-=amt; if(Math.abs(d[i].a)<1)i++; if(c[j].a<1)j++; } return {balances:b, settlements:s}; 
+        }
         function splitEvenly() {
             const total = parseFloat(document.getElementById('w-total').value);
             if(total > 0) {
@@ -896,6 +920,7 @@
         }
         function saveExpense() { const item=document.getElementById('w-item').value, currency=document.getElementById('w-currency').value, y=parseFloat(document.getElementById('amt-yukti').value)||0, r=parseFloat(document.getElementById('amt-rejith').value)||0, n=parseFloat(document.getElementById('amt-neha').value)||0, total=y+r+n; if(item&&total>0){ state.expenses.unshift({id:uid(), updatedAt: Date.now(), item, total, currency, paidBy:tempPayer, split:{'Yukti':y,'Rejith':r,'Neha':n}}); closeModal('wallet-modal'); persist(); } }
         function deleteExpense(id) { 
+            // ALERT: This proves the function is reachable!
             if(confirm("Delete expense?")) {
                 state.expenses = state.expenses.filter(e => String(e.id) !== String(id)); 
                 persist(); 
@@ -928,6 +953,7 @@
 
         // MODALS
         function openModal(id){
+            console.log("Opening modal:", id); // DEBUG LOG
             document.getElementById(id).classList.remove('hidden'); 
             if(id==='wallet-modal'){tempPayer=currentUser; updatePayerUI(document.querySelectorAll('.payer-opt')[USERS.indexOf(currentUser)]);}
         }
@@ -936,11 +962,4 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
 
