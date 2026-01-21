@@ -595,7 +595,11 @@
                 persist(); 
             }
         }
-        function deletePackItem(cat, itemId) { state.packing[cat] = state.packing[cat].filter(i => i.id !== itemId); persist(); }
+        //function deletePackItem(cat, itemId) { state.packing[cat] = state.packing[cat].filter(i => i.id !== itemId); persist(); }
+        function deletePackItem(cat, itemId) { 
+        state.packing[cat] = state.packing[cat].filter(i => String(i.id) !== String(itemId)); 
+        persist(); 
+        }
         function addPackingCategory() { const name = prompt("List Name:"); if(name && !state.packing[name]) { state.packing[name] = []; persist(); } }
         function deletePackingCategory(cat) { if(confirm('Delete "'+cat+'"?')) { delete state.packing[cat]; persist(); } }
 
@@ -605,9 +609,20 @@
             for(let i=1; i<=state.settings.duration; i++){ const k=`Day ${i}`; if(!state.itinerary[k])state.itinerary[k]=[]; h+=`<div class="relative pl-10"><div class="absolute left-[-9px] top-0 w-5 h-5 bg-[#7b1113] dark:bg-[#ffb300] rotate-45 border-2 border-[#ffb300] dark:border-[#7b1113] z-10"></div><div class="himalayan-card p-5 mb-6"><div class="flex justify-between items-center border-b border-[#dcdcdc] dark:border-gray-700 pb-2 mb-3"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300] font-bold">${k}</span><button onclick="addActivity('${k}')" class="text-xs border border-gray-400 px-2 rounded">+ Event</button></div><div class="space-y-3">${state.itinerary[k].map((a)=>`<div class="flex gap-4 font-serif text-[#2c1810] dark:text-gray-300 items-center group"><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300] bg-[#f9f7f2] dark:bg-[#333] px-2 border border-gray-300 dark:border-gray-600">${a.time}</span><span class="flex-1 text-lg border-b border-dotted border-gray-400 dark:border-gray-600">${a.text}</span><button onclick="deleteActivity('${k}','${a.id}')" class="text-gray-400 opacity-50 hover:text-red-800"><i data-lucide="x" size="14"></i></button></div>`).join('')}</div></div></div>`; } c.innerHTML=h+`</div>`;
         }
         function saveFlight() { const getVal = (id) => document.getElementById(id) ? document.getElementById(id).value : ''; const f = { id: uid(), updatedAt: Date.now(), from: getVal('f-from'), to: getVal('f-to'), airline: getVal('f-airline'), no: getVal('f-no'), time: getVal('f-time'), term: getVal('f-term'), gate: getVal('f-gate'), seat: getVal('f-seat') }; if(f.from){ state.flights.push(f); closeModal('flight-modal'); persist(); } }
-        function deleteFlight(id) { if(confirm('Del?')){ state.flights = state.flights.filter(f => f.id !== id); persist(); } }
+        //function deleteFlight(id) { if(confirm('Del?')){ state.flights = state.flights.filter(f => f.id !== id); persist(); } }
+        function deleteFlight(id) { 
+        if(confirm('Delete Flight?')){ 
+            state.flights = state.flights.filter(f => String(f.id) !== String(id)); 
+            persist(); 
+            } 
+        }
         function addActivity(day) { const t=prompt("Activity:"); if(t){ state.itinerary[day].push({ id: uid(), updatedAt: Date.now(), time:prompt("Time:","12:00"), text:t }); state.itinerary[day].sort((a,b)=>a.time.localeCompare(b.time)); persist(); } }
-        function deleteActivity(day, id) { state.itinerary[day] = state.itinerary[day].filter(i => i.id !== id); persist(); }
+        //function deleteActivity(day, id) { state.itinerary[day] = state.itinerary[day].filter(i => i.id !== id); persist(); }
+        function deleteActivity(day, id) { 
+        state.itinerary[day] = state.itinerary[day].filter(i => String(i.id) !== String(id)); 
+        persist(); 
+        }
+        
 
         // WALLET
         function renderWallet(c) {
@@ -618,13 +633,31 @@
         }
         function calculateSettlements() { let b={'Yukti':0,'Rejith':0,'Neha':0}; state.expenses.forEach(e => { let factor = e.currency === 'NPR' ? 1.6 : 1; let paidINR = e.total / factor; b[e.paidBy] += paidINR; if(e.split) Object.entries(e.split).forEach(([p,a]) => { b[p] -= (a / factor); }); }); let d=[],c=[]; Object.entries(b).forEach(([p,a])=>{if(a<-1)d.push({p,a}); if(a>1)c.push({p,a})}); let s=[]; let i=0,j=0; while(i<d.length && j<c.length){ let amt=Math.min(Math.abs(d[i].a),c[j].a); s.push(`${d[i].p} pays ${c[j].p} ₹${Math.round(amt)}`); d[i].a+=amt; c[j].a-=amt; if(Math.abs(d[i].a)<1)i++; if(c[j].a<1)j++; } return {balances:b, settlements:s}; }
         function saveExpense() { const item=document.getElementById('w-item').value, currency=document.getElementById('w-currency').value, y=parseFloat(document.getElementById('amt-yukti').value)||0, r=parseFloat(document.getElementById('amt-rejith').value)||0, n=parseFloat(document.getElementById('amt-neha').value)||0, total=y+r+n; if(item&&total>0){ state.expenses.unshift({id:uid(), updatedAt: Date.now(), item, total, currency, paidBy:tempPayer, split:{'Yukti':y,'Rejith':r,'Neha':n}}); closeModal('wallet-modal'); persist(); } }
-        function deleteExpense(id) { state.expenses = state.expenses.filter(e => e.id !== id); persist(); }
+        //function deleteExpense(id) { state.expenses = state.expenses.filter(e => e.id !== id); persist(); }
+        function deleteExpense(id) { 
+        state.expenses = state.expenses.filter(e => String(e.id) !== String(id)); 
+        persist(); 
+        }
+
+        function splitEvenly() {
+        const total = parseFloat(document.getElementById('w-total').value);
+        if(total > 0) {
+            const split = (total / 3).toFixed(2);
+            document.getElementById('amt-yukti').value = split;
+            document.getElementById('amt-rejith').value = split;
+            document.getElementById('amt-neha').value = split;
+          }
+        }
 
         // EXPLORE & SIDEBAR & UTILS
         function renderExplore(c) { let h=`<div class="fade-in grid md:grid-cols-2 gap-8 pb-24">`; for(const [k,v] of Object.entries(state.explore)){h+=`<div class="himalayan-card p-6"><div class="flex justify-between border-b border-gray-300 dark:border-gray-600 pb-2 mb-4"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300] uppercase tracking-widest">${k}</span></div><div class="space-y-3">${v.map((x,i)=>`<div class="flex items-center gap-3 border-b border-dashed border-gray-200 dark:border-gray-700 pb-2"><div onclick="toggleItem('explore','${k}','${x.id}')" class="w-6 h-6 border-2 border-gray-400 flex items-center justify-center cursor-pointer">${x.done?'<i data-lucide="check" class="text-[#178a3d]" size="14"></i>':''}</div><span class="${x.done?'line-through opacity-50':''} flex-1 font-serif text-xl">${x.name}</span><button onclick="deleteExploreItem('${k}','${x.id}')" class="text-gray-400 hover:text-red-800">x</button></div>`).join('')}<input onkeydown="if(event.key==='Enter')addItem(this,'explore','${k}')" placeholder="+ Add..." class="w-full bg-transparent font-hand text-xl p-2 outline-none"></div></div>`;} c.innerHTML=h+`</div>`; }
         function addItem(input, type, cat) { if(input.value.trim()){ state[type][cat].push({ id: uid(), updatedAt: Date.now(), name:input.value, done:false }); persist(); } }
         function toggleItem(type, cat, id) { const i = state[type][cat].find(x => x.id === id); if(i) { i.done = !i.done; i.updatedAt = Date.now(); persist(); } }
-        function deleteExploreItem(cat, id) { state.explore[cat] = state.explore[cat].filter(i => i.id !== id); persist(); }
+        // function deleteExploreItem(cat, id) { state.explore[cat] = state.explore[cat].filter(i => i.id !== id); persist(); }
+        function deleteExploreItem(cat, id) { 
+        state.explore[cat] = state.explore[cat].filter(i => String(i.id) !== String(id)); 
+        persist(); 
+        }
         
         function renderSidebar() { let h=`<div class="p-6 border-b border-gray-300 dark:border-gray-700 mb-6 text-center"><div class="font-nepal text-sm uppercase tracking-widest text-[#2c1810] dark:text-[#ccc]">Current Scribe</div><div class="font-hand text-4xl text-[#7b1113] dark:text-[#ffb300] font-bold">${currentUser}</div></div>`; h+= `<div class="mb-6"><label class="font-nepal text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Portraits</label><div class="flex gap-2"><input onblur="updatePhotoLink(this.value)" value="${state.photoAlbum||''}" placeholder="Paste Link..." class="flex-1 bg-white border border-gray-300 dark:border-gray-600 p-1 font-mono text-xs"><a href="${state.photoAlbum}" target="_blank" class="text-[#7b1113] hover:text-[#ffb300]"><i data-lucide="image" size="18"></i></a></div></div>`; h+= `<div class="mb-6 h-96 flex flex-col"><label class="font-nepal text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Quick Notes</label><textarea id="scratchpad-area" onblur="updateScratchpad(this.value)" class="charcoal-notes flex-1 w-full resize-none outline-none shadow-inner border border-gray-400 dark:border-gray-700 rounded-sm" placeholder="Scribble here...">${state.scratchpad||''}</textarea></div>`; document.getElementById('sidebar-content').innerHTML = h; updateUserUI(); lucide.createIcons(); }
       
@@ -644,6 +677,7 @@
 
 </body>
 </html>
+
 
 
 
