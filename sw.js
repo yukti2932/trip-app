@@ -1,4 +1,4 @@
-const CACHE_NAME = 'triosync-v40-good job'; // Bumped version to force update
+const CACHE_NAME = 'triosync-v40- Flight Fix'; // Bumped version to force update
 const ASSETS_TO_CACHE = [
     './',                 // Cache the directory root
     './index.html',       // Cache the file explicitly
