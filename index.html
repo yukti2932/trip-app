@@ -499,8 +499,6 @@
 
  -->
 
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1012,7 +1010,7 @@
                         <div class="flex justify-between items-center mb-4 border-b border-[#dcdcdc] dark:border-gray-700 pb-2">
                             <h2 class="font-nepal text-2xl text-[#7b1113] dark:text-[#ffb300] tracking-widest">Scribe's Notes</h2>
                         </div>
-                        <textarea id="mobile-scratchpad" oninput="updateScratchpad(this.value)" class="charcoal-notes flex-1 w-full resize-none outline-none shadow-inner border border-gray-400 dark:border-gray-700 rounded-sm" placeholder="Scribble your thoughts here...">${state.scratchpad||''}</textarea>
+                        <textarea id="mobile-scratchpad" onblur="updateScratchpad(this.value)" class="charcoal-notes flex-1 w-full resize-none outline-none shadow-inner border border-gray-400 dark:border-gray-700 rounded-sm" placeholder="Scribble your thoughts here...">${state.scratchpad||''}</textarea>
                     </div>`;
             c.innerHTML = h;
         }
@@ -1036,3 +1034,4 @@
     </script>
 </body>
 </html>
+
