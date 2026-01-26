@@ -137,545 +137,6 @@
                 </select>
             </div>
 
-            <div class="flex items-center gap-2 mb-2"><div class="text-xs font-nepal text-gray-500 uppercase">Paid By:</div></div>
-            <div class="grid grid-cols-3 gap-2 mb-4">
-                <button onclick="tempPayer='Yukti'; updatePayerUI(this)" class="payer-opt border border-gray-300 p-2 rounded text-xs font-bold uppercase">Yukti</button>
-                <button onclick="tempPayer='Rejith'; updatePayerUI(this)" class="payer-opt border border-gray-300 p-2 rounded text-xs font-bold uppercase">Rejith</button>
-                <button onclick="tempPayer='Neha'; updatePayerUI(this)" class="payer-opt border border-gray-300 p-2 rounded text-xs font-bold uppercase">Neha</button>
-            </div>
-
-            <div class="bg-gray-50 dark:bg-[#121212] p-3 border border-dashed border-gray-300 dark:border-gray-700 mb-6 rounded text-sm">
-                <div class="flex justify-between mb-2">
-                    <span class="font-nepal uppercase text-gray-500 text-xs">Split</span>
-                    <button onclick="splitEvenly()" class="text-xs font-bold text-[#7b1113] dark:text-[#ffb300] underline">Split Evenly</button>
-                </div>
-                <div class="space-y-2 font-mono">
-                    <div class="flex gap-2 items-center"><span>Y:</span><input id="amt-yukti" type="number" class="w-full bg-transparent border-b border-gray-300 text-center"></div>
-                    <div class="flex gap-2 items-center"><span>R:</span><input id="amt-rejith" type="number" class="w-full bg-transparent border-b border-gray-300 text-center"></div>
-                    <div class="flex gap-2 items-center"><span>N:</span><input id="amt-neha" type="number" class="w-full bg-transparent border-b border-gray-300 text-center"></div>
-                </div>
-            </div>
-
-            <div class="flex gap-3">
-                <button onclick="closeModal('wallet-modal')" class="flex-1 py-2 font-nepal text-gray-500">Cancel</button>
-                <button onclick="saveExpense()" class="flex-1 py-2 bg-[#7b1113] dark:bg-[#ffb300] text-white dark:text-black font-nepal font-bold shadow-lg rounded">Confirm</button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="flight-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 fade-in">
-        <div class="himalayan-card w-full max-w-md p-6">
-            <h3 class="font-nepal font-bold text-xl mb-4 text-[#7b1113] dark:text-[#ffb300]">Boarding Pass</h3>
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                <input id="f-from" type="text" placeholder="From" class="bg-transparent border-b border-gray-300 dark:border-gray-600 p-1 font-serif text-lg outline-none">
-                <input id="f-to" type="text" placeholder="To" class="bg-transparent border-b border-gray-300 dark:border-gray-600 p-1 font-serif text-lg outline-none">
-            </div>
-            <div class="grid grid-cols-2 gap-2 mb-4">
-                <input id="f-airline" type="text" placeholder="Airline" class="bg-transparent border-b border-gray-300 dark:border-gray-600 p-1 text-sm">
-                <input id="f-no" type="text" placeholder="Flight #" class="bg-transparent border-b border-gray-300 dark:border-gray-600 p-1 text-sm">
-            </div>
-            <div class="grid grid-cols-4 gap-2 mb-6">
-                <input id="f-time" type="time" class="bg-transparent border-b border-gray-300 dark:border-gray-600 p-1 text-sm col-span-2">
-                <input id="f-gate" type="text" placeholder="Gate" class="bg-transparent border-b border-gray-300 dark:border-gray-600 p-1 text-sm">
-                <input id="f-seat" type="text" placeholder="Seat" class="bg-transparent border-b border-gray-300 dark:border-gray-600 p-1 text-sm">
-            </div>
-            <div class="flex justify-end gap-3">
-                <button onclick="closeModal('flight-modal')" class="px-4 py-2 font-nepal text-gray-500">Discard</button>
-                <button onclick="saveFlight()" class="px-6 py-2 bg-[#263238] dark:bg-[#ffb300] text-[#ffb300] dark:text-black font-nepal shadow-lg rounded">Save Ticket</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // --- CONFIGURATION ---
-        const SUPABASE_URL = 'https://rpdaituulgowvgzxjaeh.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZGFpdHV1bGdvd3ZnenhqYWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY3NDgyMzEsImV4cCI6MjA4MjMyNDIzMX0.pq8398t-2laAuo_V69gZBl_kQ6Yjp6_RgroYMFxBfQA';
-        const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const USERS = ['Yukti', 'Rejith', 'Neha'];
-        
-        // --- STATE MANAGEMENT ---
-        let currentUser = localStorage.getItem('trio_user') || null;
-        let tempPayer = currentUser || 'Yukti';
-        let isBookOpen = false;
-        let currentSpreadIndex = 0; 
-        let isDirty = false; 
-
-        // Default State
-        let state = { 
-            settings: { startDate: '2025-01-01', duration: 3 }, 
-            expenses: [], 
-            flights: [], 
-            itinerary: {}, 
-            packing: { 'General': [] }, 
-            explore: { 'Food': [], 'Places': [] }, 
-            photoAlbum: '', 
-            scratchpad: '' 
-        };
-
-        // --- INITIALIZATION ---
-        window.onload = () => { 
-            lucide.createIcons(); 
-            checkLogin(); 
-            registerSW();
-            const localData = localStorage.getItem('trip_smart_data');
-            if (localData) {
-                try {
-                    state = JSON.parse(localData);
-                    ensureIDs(); 
-                } catch(e) { console.error("Corrupt local data", e); }
-            }
-            refreshUI();
-            syncLoop();
-            setInterval(syncLoop, 4000); 
-            if(localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
-            updateThemeIcon();
-        };
-
-        function registerSW() {
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('./sw.js').catch(console.error);
-            }
-        }
-
-        function checkLogin() { 
-            if (!currentUser || !USERS.includes(currentUser)) { 
-                const u = prompt("Who are you? (Yukti, Rejith, Neha)"); 
-                if(USERS.includes(u)){ currentUser = u; localStorage.setItem('trio_user', u); location.reload(); } 
-                else alert("Access Denied."); 
-            } 
-            updateUserUI(); 
-        }
-
-        // --- SYNC ENGINE ---
-        async function syncLoop() {
-            if (!navigator.onLine) {
-                document.getElementById('sync-status').innerText = "Offline (Saved)";
-                document.getElementById('sync-dot').className = "w-2 h-2 bg-orange-500 rounded-full";
-                return;
-            }
-            try {
-                const { data } = await client.from('trip_data').select('app_state').eq('id', 1).single();
-                if (data?.app_state) {
-                    const cloud = data.app_state;
-                    let hasChanges = false;
-                    
-                    const newExpenses = smartMerge(state.expenses, cloud.expenses);
-                    if(JSON.stringify(newExpenses) !== JSON.stringify(state.expenses)) { state.expenses = newExpenses; hasChanges = true; }
-
-                    const newFlights = smartMerge(state.flights, cloud.flights);
-                    if(JSON.stringify(newFlights) !== JSON.stringify(state.flights)) { state.flights = newFlights; hasChanges = true; }
-
-                    ['itinerary', 'packing', 'explore'].forEach(key => {
-                        const allKeys = new Set([...Object.keys(state[key]), ...Object.keys(cloud[key] || {})]);
-                        allKeys.forEach(k => {
-                            const localArr = state[key][k] || [];
-                            const cloudArr = (cloud[key] || {})[k] || [];
-                            const mergedArr = smartMerge(localArr, cloudArr);
-                            if(JSON.stringify(mergedArr) !== JSON.stringify(localArr)) {
-                                state[key][k] = mergedArr;
-                                hasChanges = true;
-                            }
-                        });
-                    });
-
-                    if(!isDirty && cloud.scratchpad !== state.scratchpad) { state.scratchpad = cloud.scratchpad; hasChanges = true; }
-                    if(!isDirty && cloud.photoAlbum !== state.photoAlbum) { state.photoAlbum = cloud.photoAlbum; hasChanges = true; }
-                    
-                    if(hasChanges) {
-                        localStorage.setItem('trip_smart_data', JSON.stringify(state));
-                        refreshUI();
-                    }
-                }
-
-                if (isDirty) {
-                    document.getElementById('sync-status').innerText = "Syncing...";
-                    await client.from('trip_data').update({ app_state: state }).eq('id', 1);
-                    isDirty = false;
-                    document.getElementById('sync-status').innerText = "Live";
-                    document.getElementById('sync-dot').className = "w-2 h-2 bg-green-500 rounded-full";
-                } else {
-                    document.getElementById('sync-status').innerText = "Live";
-                    document.getElementById('sync-dot').className = "w-2 h-2 bg-green-500 rounded-full";
-                }
-            } catch (e) { console.error("Sync Error", e); }
-        }
-
-        function smartMerge(localList, cloudList) {
-            if (!localList) localList = [];
-            if (!cloudList) cloudList = [];
-            const map = new Map();
-            localList.forEach(item => { if(item.id) map.set(item.id, item); });
-            cloudList.forEach(cItem => {
-                if(!cItem.id) return; 
-                if (map.has(cItem.id)) {
-                    const lItem = map.get(cItem.id);
-                    if ((cItem.updatedAt || 0) > (lItem.updatedAt || 0)) {
-                        map.set(cItem.id, cItem);
-                    }
-                } else {
-                    map.set(cItem.id, cItem);
-                }
-            });
-            return Array.from(map.values());
-        }
-
-        const uid = () => Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-        
-        function ensureIDs() {
-            const fix = (arr) => { if(arr) arr.forEach(i => { if(!i.id) i.id = uid(); if(!i.updatedAt) i.updatedAt = 0; if(!i.deleted) i.deleted=false; }); };
-            if(state.expenses) fix(state.expenses);
-            if(state.flights) fix(state.flights);
-            if(state.packing) Object.values(state.packing).forEach(fix);
-            if(state.explore) Object.values(state.explore).forEach(fix);
-            if(state.itinerary) Object.values(state.itinerary).forEach(fix);
-        }
-
-        function persist() {
-            localStorage.setItem('trip_smart_data', JSON.stringify(state));
-            isDirty = true;
-            refreshUI();
-            if(navigator.onLine) syncLoop();
-        }
-
-        // --- UI RENDERERS ---
-
-        function refreshUI() { const active = document.querySelector('.nav-btn.active')?.id.replace('d-nav-', '') || 'planner'; renderTab(active); renderSidebar(); }
-        
-        function renderTab(tabName) { 
-            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active', 'text-[#ffb300]')); 
-            const dBtn = document.getElementById(`d-nav-${tabName}`); 
-            if(dBtn) dBtn.classList.add('active', 'text-[#ffb300]'); 
-            const container = document.getElementById('app-container'); 
-            container.innerHTML = ''; 
-            if(tabName === 'planner') renderPlanner(container); 
-            if(tabName === 'explore') renderExplore(container); 
-            if(tabName === 'packing') renderPacking(container); 
-            if(tabName === 'wallet') renderWallet(container); 
-            if(tabName === 'notes') renderNotes(container);
-            lucide.createIcons(); 
-        }
-
-        // PACKING
-        function renderPacking(c) {
-            let h = `<div class="fade-in grid grid-cols-1 md:grid-cols-2 gap-6 pb-24">`;
-            for(const [cat, items] of Object.entries(state.packing)) {
-                h += `<div class="himalayan-card p-4"><div class="flex justify-between border-b border-gray-300 dark:border-gray-600 pb-2 mb-3"><span class="font-nepal font-bold text-[#7b1113] dark:text-[#ffb300] uppercase tracking-wider">${cat}</span><button onclick="removePackingCategory('${cat}')" class="text-gray-400 hover:text-red-500">x</button></div><div class="space-y-2">`;
-                items.filter(i => !i.deleted).forEach((item) => {
-                    const assigned = item.assigned || ['Yukti','Rejith','Neha'];
-                    const completed = item.completed || [];
-                    h += `<div class="flex items-center gap-2 border-b border-dashed border-gray-200 dark:border-gray-700 pb-1"><span class="flex-1 font-serif text-lg">${item.name}</span><div class="flex gap-1">`;
-                    ['Yukti', 'Rejith', 'Neha'].forEach(p => { if(assigned.includes(p)) { const isDone = completed.includes(p); let btnClass = ""; if(p === 'Yukti') btnClass = `pb-yukti ${isDone?'checked':''}`; if(p === 'Rejith') btnClass = `pb-rejith ${isDone?'checked':''}`; if(p === 'Neha') btnClass = `pb-neha ${isDone?'checked':''}`; h += `<button onclick="togglePack('${cat}','${item.id}','${p}')" class="pack-btn ${btnClass}">${p.charAt(0)}</button>`; } });
-                    h += `</div><button onclick="removePackItem('${cat}','${item.id}')" class="text-gray-400 hover:text-[#7b1113] dark:hover:text-[#ffb300] ml-2"><i data-lucide="trash-2" size="14"></i></button></div>`;
-                });
-                h += `</div><div class="flex flex-col gap-2 mt-4 pt-2 border-t border-gray-300 dark:border-gray-600"><div class="flex items-center gap-2"><span class="text-[10px] font-nepal uppercase text-gray-500">Assign:</span><div class="flex gap-1" id="assign-${cat}"><button onclick="this.classList.toggle('bg-[#7b1113]'); this.classList.toggle('text-white')" class="text-[10px] border border-gray-400 px-1 rounded bg-[#7b1113] text-white" data-user="Yukti">Y</button><button onclick="this.classList.toggle('bg-[#7b1113]'); this.classList.toggle('text-white')" class="text-[10px] border border-gray-400 px-1 rounded bg-[#7b1113] text-white" data-user="Rejith">R</button><button onclick="this.classList.toggle('bg-[#7b1113]'); this.classList.toggle('text-white')" class="text-[10px] border border-gray-400 px-1 rounded bg-[#7b1113] text-white" data-user="Neha">N</button></div></div><div class="flex gap-2"><input id="add-${cat}-name" placeholder="Item Name..." class="flex-1 bg-transparent border-b border-gray-300 dark:border-gray-600 font-hand text-lg"><button onclick="addPackItem('${cat}')" class="font-bold text-[#7b1113] dark:text-[#ffb300]">+</button></div></div></div>`;
-            } 
-            h += `<button onclick="addPackingCategory()" class="w-full py-4 border-2 border-dashed border-[#7b1113] dark:border-[#ffb300] text-[#7b1113] dark:text-[#ffb300] font-nepal uppercase tracking-widest col-span-1 md:col-span-2 shadow-sm mb-8 hover:bg-[#fffef8] dark:hover:bg-[#333]">+ Create List</button></div>`;
-            c.innerHTML = h;
-        }
-        function addPackItem(cat) { const name = document.getElementById(`add-${cat}-name`).value; if(!name) return; const container = document.getElementById(`assign-${cat}`); const assigned = []; Array.from(container.children).forEach(btn => { if(btn.classList.contains('bg-[#7b1113]')) assigned.push(btn.getAttribute('data-user')); }); if(assigned.length === 0) assigned.push('Yukti','Rejith','Neha'); 
-            state.packing[cat].push({ id: uid(), updatedAt: Date.now(), name, assigned, completed: [], deleted: false }); persist(); 
-        }
-        function togglePack(cat, itemId, person) { 
-            const item = state.packing[cat].find(i => i.id === itemId); 
-            if(item) {
-                if(!item.completed) item.completed=[]; 
-                if(item.completed.includes(person)) item.completed = item.completed.filter(p => p !== person); else item.completed.push(person); 
-                item.updatedAt = Date.now();
-                persist(); 
-            }
-        }
-        function removePackItem(cat, itemId) { 
-            if(state.packing[cat]) {
-                const i = state.packing[cat].find(x => String(x.id) === String(itemId));
-                if(i) {
-                    i.deleted = true;
-                    i.updatedAt = Date.now();
-                    persist();
-                }
-            }
-        }
-        function addPackingCategory() { const name = prompt("List Name:"); if(name && !state.packing[name]) { state.packing[name] = []; persist(); } }
-        function removePackingCategory(cat) { if(confirm('Delete "'+cat+'"?')) { delete state.packing[cat]; persist(); } }
-
-        // PLANNER
-        function renderPlanner(c) {
-            let h = `<div class="fade-in max-w-4xl mx-auto space-y-8 pl-6 relative pb-24"><div class="himalayan-card p-6 relative mb-8"><div class="flex justify-between items-center mb-4 border-b border-[#dcdcdc] dark:border-gray-700 pb-2"><h2 class="font-nepal text-2xl text-[#7b1113] dark:text-[#ffb300] tracking-widest">Flight Deck</h2><button onclick="openModal('flight-modal')" class="bg-[#263238] dark:bg-[#ffb300] text-[#ffb300] dark:text-black px-3 py-1 font-bold font-nepal text-xs rounded shadow-sm">+ TICKET</button></div>${state.flights.filter(f => !f.deleted).length === 0 ? '<div class="text-center font-hand text-xl opacity-50 py-4">No flights added.</div>' : ''}${state.flights.filter(f => !f.deleted).map((f) => `<div class="relative group mb-4 p-4 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#252525]"><button onclick="removeFlight('${f.id}')" class="absolute top-2 right-2 text-red-800 font-bold hover:scale-110">x</button><div class="flex justify-between items-end border-b border-gray-300 dark:border-gray-600 pb-2 mb-2"><div><div class="font-nepal text-xs text-gray-500">DEPART</div><div class="font-nepal text-3xl text-[#2c1810] dark:text-white">${f.from}</div></div><div class="text-center"><div class="font-mono text-xs text-[#7b1113] dark:text-[#ffb300]">${f.time}</div><i data-lucide="plane" class="text-[#ffb300]" size="24"></i></div><div class="text-right"><div class="font-nepal text-xs text-gray-500">ARRIVE</div><div class="font-nepal text-3xl text-[#2c1810] dark:text-white">${f.to}</div></div></div><div class="font-mono text-xs text-[#7b1113] dark:text-[#ffb300] mt-2"><div class="w-full truncate font-bold mb-1">AIR: ${f.airline}</div><div class="flex justify-between border-t border-dashed border-gray-400 dark:border-gray-600 pt-1"><span>FL: ${f.no}</span><span>GT: ${f.gate || '-'}</span><span>ST: ${f.seat || '-'}</span></div></div></div>`).join('')}</div><div class="absolute left-6 top-0 bottom-0 w-1 bg-[#ffb300] dark:bg-[#7b1113]"></div>`;
-            for(let i=1; i<=state.settings.duration; i++){ const k=`Day ${i}`; if(!state.itinerary[k])state.itinerary[k]=[]; h+=`<div class="relative pl-10"><div class="absolute left-[-9px] top-0 w-5 h-5 bg-[#7b1113] dark:bg-[#ffb300] rotate-45 border-2 border-[#ffb300] dark:border-[#7b1113] z-10"></div><div class="himalayan-card p-5 mb-6"><div class="flex justify-between items-center border-b border-[#dcdcdc] dark:border-gray-700 pb-2 mb-3"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300] font-bold">${k}</span><button onclick="addActivity('${k}')" class="text-xs border border-gray-400 px-2 rounded">+ Event</button></div><div class="space-y-3">${state.itinerary[k].filter(a => !a.deleted).map((a)=>`<div class="flex gap-4 font-serif text-[#2c1810] dark:text-gray-300 items-center group"><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300] bg-[#f9f7f2] dark:bg-[#333] px-2 border border-gray-300 dark:border-gray-600">${a.time}</span><span class="flex-1 text-lg border-b border-dotted border-gray-400 dark:border-gray-600">${a.text}</span><button onclick="removeActivity('${k}','${a.id}')" class="text-gray-400 opacity-50 hover:text-red-800"><i data-lucide="x" size="14"></i></button></div>`).join('')}</div></div></div>`; } 
-            
-            // Add/Remove Days Controls
-            h += `<div class="flex justify-center gap-4 mt-8 pb-4">
-                    <button onclick="changeDuration(-1)" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded font-nepal text-sm hover:bg-[#ffb300] dark:hover:bg-[#ffb300] dark:hover:text-black">- Remove Day</button>
-                    <button onclick="changeDuration(1)" class="px-3 py-1 bg-[#7b1113] dark:bg-[#ffb300] text-white dark:text-black rounded font-nepal font-bold shadow-sm hover:opacity-90">+ Add Day</button>
-                  </div>`;
-            
-            c.innerHTML=h+`</div>`;
-        }
-        function saveFlight() { const getVal = (id) => document.getElementById(id) ? document.getElementById(id).value : ''; const f = { id: uid(), updatedAt: Date.now(), from: getVal('f-from'), to: getVal('f-to'), airline: getVal('f-airline'), no: getVal('f-no'), time: getVal('f-time'), term: getVal('f-term'), gate: getVal('f-gate'), seat: getVal('f-seat'), deleted: false }; if(f.from){ state.flights.push(f); closeModal('flight-modal'); persist(); } }
-        function removeFlight(id) { 
-            if(confirm('Delete Flight?')){ 
-                const f = state.flights.find(x => String(x.id) === String(id));
-                if(f) {
-                    f.deleted = true;
-                    f.updatedAt = Date.now();
-                    persist();
-                }
-            } 
-        }
-        function addActivity(day) { const t=prompt("Activity:"); if(t){ state.itinerary[day].push({ id: uid(), updatedAt: Date.now(), time:prompt("Time:","12:00"), text:t, deleted: false }); state.itinerary[day].sort((a,b)=>a.time.localeCompare(b.time)); persist(); } }
-        function removeActivity(day, id) { 
-            if(state.itinerary[day]) {
-                const i = state.itinerary[day].find(x => String(x.id) === String(id));
-                if(i) {
-                    i.deleted = true;
-                    i.updatedAt = Date.now();
-                    persist();
-                }
-            }
-        }
-        function changeDuration(delta) {
-            state.settings.duration = Math.max(1, state.settings.duration + delta);
-            persist();
-        }
-
-        // WALLET
-        function renderWallet(c) {
-            try {
-                let {settlements} = calculateSettlements();
-                let activeExpenses = state.expenses.filter(e => !e.deleted);
-                
-                let totalINR = activeExpenses.reduce((s,i) => { let amt = i.currency === 'NPR' ? i.total / 1.6 : i.total; return s + amt; }, 0);
-                let myShare = activeExpenses.reduce((s,i) => { 
-                    let amt = i.currency === 'NPR' ? i.total / 1.6 : i.total; 
-                    let myPortion = (i.split && i.split[currentUser]) ? i.split[currentUser] : 0; 
-                    if(i.currency === 'NPR') myPortion = myPortion / 1.6; 
-                    return s + myPortion; 
-                }, 0);
-                
-                let h = `<div class="fade-in max-w-3xl mx-auto space-y-8 pb-24"><div class="bg-[#f9f7f2] dark:bg-[#1e1e1e] p-3 rounded border border-[#dcdcdc] dark:border-gray-600 flex justify-between items-center text-sm shadow-sm"><div class="flex gap-2 items-center"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">₹ INR</span><input id="calc-inr" type="number" class="w-16 bg-white border p-1" oninput="convert('inr')"></div><i data-lucide="arrow-right-left" size="14" class="text-gray-400"></i><div class="flex gap-2 items-center"><input id="calc-npr" type="number" class="w-16 bg-white border p-1" oninput="convert('npr')"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">NPR</span></div></div><div class="bg-[#263238] border-b-4 border-[#ffb300] p-8 rounded shadow-lg relative overflow-hidden"><div class="relative z-10 flex justify-between items-center text-[#ffb300]"><div><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">TOTAL SPENT (INR)</div><div class="font-nepal text-5xl">₹${Math.round(totalINR)}</div></div><div class="text-right"><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">YOUR SHARE</div><div class="font-nepal text-3xl">₹${Math.round(myShare)}</div></div></div><button onclick="openModal('wallet-modal')" class="w-full mt-6 bg-[#ffb300] text-[#263238] py-3 font-bold font-nepal hover:bg-white transition-colors rounded">ADD EXPENSE</button></div><div class="himalayan-card p-6 relative mt-6"><div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#7b1113] dark:bg-[#ffb300] text-white dark:text-black px-4 py-1 font-nepal text-xs uppercase rounded">Settlement</div><div class="space-y-2 font-serif italic text-gray-700 dark:text-gray-300 text-center mt-4">${settlements.length===0?'<div class="opacity-50">Balanced.</div>':settlements.map(s=>`<div class="flex justify-between border-b border-dashed border-gray-300 pb-1"><span>${s.split('₹')[0]}</span><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300]">₹${s.split('₹')[1]}</span></div>`).join('')}</div></div><div class="space-y-4">${activeExpenses.length === 0 ? '<div class="text-center opacity-50 py-4">No expenses recorded yet.</div>' : activeExpenses.map((e)=>`<div class="himalayan-card p-4 flex justify-between items-center"><div><div class="font-serif text-xl font-bold">${e.item} <span class="text-xs font-normal text-gray-500">(${e.currency||'INR'})</span></div><div class="text-xs font-nepal text-gray-400 uppercase tracking-widest">${e.paidBy} Paid</div></div><div class="flex items-center gap-4"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300]">${(e.currency==='NPR'?'Np ':'₹') + e.total}</span><button onclick="removeExpense('${e.id}')" class="text-gray-400 hover:text-red-800"><i data-lucide="trash-2" size="16"></i></button></div></div>`).join('')}</div></div>`; c.innerHTML = h;
-            } catch(e) {
-                c.innerHTML = `<div class="p-4 text-red-500">Error loading wallet: ${e.message}</div>`;
-                console.error(e);
-            }
-        }
-        function calculateSettlements() { 
-            let b={'Yukti':0,'Rejith':0,'Neha':0}; 
-            state.expenses.filter(e => !e.deleted).forEach(e => { 
-                let factor = e.currency === 'NPR' ? 1.6 : 1; 
-                let paidINR = e.total / factor; 
-                b[e.paidBy] += paidINR; 
-                if(e.split) Object.entries(e.split).forEach(([p,a]) => { b[p] -= (a / factor); }); 
-            }); 
-            let d=[],c=[]; Object.entries(b).forEach(([p,a])=>{if(a<-1)d.push({p,a}); if(a>1)c.push({p,a})}); let s=[]; let i=0,j=0; while(i<d.length && j<c.length){ let amt=Math.min(Math.abs(d[i].a),c[j].a); s.push(`${d[i].p} pays ${c[j].p} ₹${Math.round(amt)}`); d[i].a+=amt; c[j].a-=amt; if(Math.abs(d[i].a)<1)i++; if(c[j].a<1)j++; } return {balances:b, settlements:s}; 
-        }
-        function splitEvenly() {
-            const total = parseFloat(document.getElementById('w-total').value);
-            if(total > 0) {
-                const split = (total / 3).toFixed(2);
-                const u = document.getElementById('amt-yukti'); if(u) u.value = split;
-                const r = document.getElementById('amt-rejith'); if(r) r.value = split;
-                const n = document.getElementById('amt-neha'); if(n) n.value = split;
-            }
-        }
-        function saveExpense() { const item=document.getElementById('w-item').value, currency=document.getElementById('w-currency').value, y=parseFloat(document.getElementById('amt-yukti').value)||0, r=parseFloat(document.getElementById('amt-rejith').value)||0, n=parseFloat(document.getElementById('amt-neha').value)||0, total=y+r+n; if(item&&total>0){ state.expenses.unshift({id:uid(), updatedAt: Date.now(), item, total, currency, paidBy:tempPayer, split:{'Yukti':y,'Rejith':r,'Neha':n}, deleted: false}); closeModal('wallet-modal'); persist(); } }
-        function removeExpense(id) { 
-            if(confirm("Delete expense?")) {
-                const e = state.expenses.find(x => String(x.id) === String(id));
-                if(e) {
-                    e.deleted = true;
-                    e.updatedAt = Date.now();
-                    persist();
-                }
-            }
-        }
-
-        // EXPLORE
-        function renderExplore(c) { let h=`<div class="fade-in grid md:grid-cols-2 gap-8 pb-24">`; for(const [k,v] of Object.entries(state.explore)){h+=`<div class="himalayan-card p-6"><div class="flex justify-between border-b border-gray-300 dark:border-gray-600 pb-2 mb-4"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300] uppercase tracking-widest">${k}</span></div><div class="space-y-3">${v.filter(x => !x.deleted).map((x)=>`<div class="flex items-center gap-3 border-b border-dashed border-gray-200 dark:border-gray-700 pb-2"><div onclick="toggleItem('explore','${k}','${x.id}')" class="w-6 h-6 border-2 border-gray-400 flex items-center justify-center cursor-pointer">${x.done?'<i data-lucide="check" class="text-[#178a3d]" size="14"></i>':''}</div><span class="${x.done?'line-through opacity-50':''} flex-1 font-serif text-xl">${x.name}</span><button onclick="removeExploreItem('${k}','${x.id}')" class="text-gray-400 hover:text-red-800">x</button></div>`).join('')}<input onkeydown="if(event.key==='Enter')addItem(this,'explore','${k}')" placeholder="+ Add..." class="w-full bg-transparent font-hand text-xl p-2 outline-none"></div></div>`;} c.innerHTML=h+`</div>`; }
-        function addItem(input, type, cat) { if(input.value.trim()){ state[type][cat].push({ id: uid(), updatedAt: Date.now(), name:input.value, done:false, deleted: false }); persist(); } }
-        function toggleItem(type, cat, id) { const i = state[type][cat].find(x => x.id === id); if(i) { i.done = !i.done; i.updatedAt = Date.now(); persist(); } }
-        function removeExploreItem(cat, id) { 
-            if(state.explore[cat]) {
-                const i = state.explore[cat].find(x => String(x.id) === String(id));
-                if(i) {
-                    i.deleted = true;
-                    i.updatedAt = Date.now();
-                    persist();
-                }
-            }
-        }
-
-        // NOTES (MOBILE ONLY TAB)
-        function renderNotes(c) {
-            let h = `<div class="fade-in max-w-3xl mx-auto h-[70vh] flex flex-col pb-24">
-                        <div class="flex justify-between items-center mb-4 border-b border-[#dcdcdc] dark:border-gray-700 pb-2">
-                            <h2 class="font-nepal text-2xl text-[#7b1113] dark:text-[#ffb300] tracking-widest">Scribe's Notes</h2>
-                        </div>
-                        <textarea id="mobile-scratchpad" onblur="updateScratchpad(this.value)" class="charcoal-notes flex-1 w-full resize-none outline-none shadow-inner border border-gray-400 dark:border-gray-700 rounded-sm" placeholder="Scribble your thoughts here...">${state.scratchpad||''}</textarea>
-                    </div>`;
-            c.innerHTML = h;
-        }
-
-        // SIDEBAR
-        function renderSidebar() { let h=`<div class="p-6 border-b border-gray-300 dark:border-gray-700 mb-6 text-center"><div class="font-nepal text-sm uppercase tracking-widest text-[#2c1810] dark:text-[#ccc]">Current Scribe</div><div class="font-hand text-4xl text-[#7b1113] dark:text-[#ffb300] font-bold">${currentUser}</div></div>`; h+= `<div class="mb-6"><label class="font-nepal text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Portraits</label><div class="flex gap-2"><input onblur="updatePhotoLink(this.value)" value="${state.photoAlbum||''}" placeholder="Paste Link..." class="flex-1 bg-white border border-gray-300 dark:border-gray-600 p-1 font-mono text-xs"><a href="${state.photoAlbum}" target="_blank" class="text-[#7b1113] hover:text-[#ffb300]"><i data-lucide="image" size="18"></i></a></div></div>`; h+= `<div class="mb-6 h-96 flex flex-col"><label class="font-nepal text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Quick Notes</label><textarea id="scratchpad-area" onblur="updateScratchpad(this.value)" class="charcoal-notes flex-1 w-full resize-none outline-none shadow-inner border border-gray-400 dark:border-gray-700 rounded-sm" placeholder="Scribble here...">${state.scratchpad||''}</textarea></div>`; document.getElementById('sidebar-content').innerHTML = h; updateUserUI(); lucide.createIcons(); }
-        function updateScratchpad(val) { state.scratchpad = val; persist(); }
-        function updatePhotoLink(val) { state.photoAlbum=val; persist(); renderSidebar(); }
-        function updateUserUI() { USERS.forEach(u => { const btn = document.getElementById(`btn-${u}`); if(btn) { if(u === currentUser) btn.className = "px-2 py-1 text-[10px] font-nepal uppercase text-[#ffb300] border-b border-[#ffb300]"; else btn.className = "px-2 py-1 text-[10px] font-nepal uppercase text-gray-400 hover:text-[#ffb300]"; } }); }
-        function switchUser(u) { currentUser = u; localStorage.setItem('trio_user', u); updateUserUI(); if(document.getElementById('d-nav-wallet').classList.contains('active')) refreshUI(); }
-        function convert(t) { const i=document.getElementById('calc-inr'), n=document.getElementById('calc-npr'); if(t==='inr') n.value=(i.value*1.6).toFixed(0); else i.value=(n.value/1.6).toFixed(0); }
-        function toggleTheme() { document.documentElement.classList.toggle('dark'); const isDark = document.documentElement.classList.contains('dark'); localStorage.setItem('theme', isDark ? 'dark' : 'light'); updateThemeIcon(); }
-        function updateThemeIcon() { const isDark = document.documentElement.classList.contains('dark'); const icon = document.getElementById('theme-icon'); if(icon) { icon.parentElement.innerHTML = `<i id="theme-icon" data-lucide="${isDark ? 'sun' : 'moon'}" size="18"></i>`; lucide.createIcons(); } }
-        function toggleSidebar() { const s=document.getElementById('sidebar'); s.classList.toggle('translate-x-full'); s.classList.toggle('hidden'); if(window.innerWidth>=768) s.classList.remove('hidden'); }
-        function openModal(id){
-            document.getElementById(id).classList.remove('hidden'); 
-            if(id==='wallet-modal'){tempPayer=currentUser; updatePayerUI(document.querySelectorAll('.payer-opt')[USERS.indexOf(currentUser)]);}
-        }
-        function closeModal(id){document.getElementById(id).classList.add('hidden');}
-        function updatePayerUI(b){document.querySelectorAll('.payer-opt').forEach(x=>x.classList.remove('bg-[#7b1113]','text-white')); if(b)b.classList.add('bg-[#7b1113]','text-white');}
-    </script>
-</body>
-</html>
-
- -->
-
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrioSync V40 - Flight Fix</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Karma:wght@400;600;700&family=Patrick+Hand&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { 
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { 
-                        nepal: ['"Karma"', 'serif'],
-                        serif: ['"Gentium Book Plus"', 'serif'],
-                        hand: ['"Patrick Hand"', 'cursive'],
-                    },
-                    colors: {
-                        maroon: "#7b1113", 
-                        saffron: "#ffb300", 
-                        darkRock: "#263238", 
-                        ricePaper: "#f9f7f2", 
-                        nightRock: "#121212",
-                        nightCard: "#1e1e1e",
-                        ink: "#2c1810",
-                    },
-                    boxShadow: {
-                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.2)',
-                        'glow': '0 0 15px rgba(255, 179, 0, 0.4)'
-                    }
-                }
-            }
-        }
-    </script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <style>
-        body { background-color: #e8e4db; background-image: url('https://www.transparenttextures.com/patterns/rice-paper-2.png'); color: #263238; overflow: hidden; transition: background-color 0.3s, color 0.3s; }
-        .dark body { background-color: #121212; background-image: url('https://www.transparenttextures.com/patterns/black-scales.png'); color: #e0e0e0; background-blend-mode: normal; }
-        .prayer-flag-border { background: linear-gradient(to right, #0050bc 0%, #0050bc 20%, #ffffff 20%, #ffffff 40%, #dc281e 40%, #dc281e 60%, #178a3d 60%, #178a3d 80%, #ffd400 80%, #ffd400 100%); height: 6px; width: 100%; }
-        .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .fade-in { animation: fadeIn 0.4s ease-out; } @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .himalayan-card { background: #fffef8; border-left: 4px solid #7b1113; border-right: 1px solid #dcdcdc; border-top: 1px solid #dcdcdc; border-bottom: 1px solid #dcdcdc; border-radius: 2px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: relative; transition: all 0.3s; }
-        .dark .himalayan-card { background: #1e1e1e; border-left: 4px solid #ffb300; border-right: 1px solid #333; border-top: 1px solid #333; border-bottom: 1px solid #333; color: #e0e0e0; }
-        input, select { transition: all 0.3s; }
-        .dark input, .dark select { background-color: #2d2d2d !important; color: #fff !important; border-color: #444 !important; }
-        .pack-btn { width: 28px; height: 28px; border: 2px solid; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: 'Karma'; background: rgba(255,255,255,0.8); margin-left: 2px; border-radius: 50%; }
-        .dark .pack-btn { background: rgba(0,0,0,0.5); }
-        .pb-yukti { border-color: #0050bc; color: #0050bc; } .pb-yukti.checked { background-color: #0050bc; color: white; }
-        .pb-rejith { border-color: #178a3d; color: #178a3d; } .pb-rejith.checked { background-color: #178a3d; color: white; }
-        .pb-neha { border-color: #dc281e; color: #dc281e; } .pb-neha.checked { background-color: #dc281e; color: white; }
-        .nav-btn { position: relative; transition: all 0.2s; opacity: 0.7; font-family: 'Karma', serif; letter-spacing: 1px; }
-        .nav-btn:hover { opacity: 1; color: #ffb300; }
-        .nav-btn.active { opacity: 1; color: #ffb300; font-weight: bold; }
-        .nav-btn.active::after { content: '•'; position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); color: #ffb300; font-size: 20px; }
-        .charcoal-notes { background: #3e2723; color: #eec; border: 2px solid #5d4037; font-family: 'Patrick Hand'; font-size: 18px; padding: 10px; line-height: 1.5; }
-        .dark .charcoal-notes { background: #1a1a1a; color: #ccc; border-color: #333; }
-        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    </style>
-    <script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js')
-        .then(() => console.log('Service Worker Registered'))
-        .catch((error) => console.log('Service Worker Failed:', error));
-    }
-</script>
-</head>
-<body class="h-screen flex flex-col overflow-hidden text-ink">
-
-    <div class="prayer-flag-border z-50 relative"></div>
-    <header class="bg-[#263238] border-b-2 border-[#ffb300] shadow-soft z-50 shrink-0 relative transition-colors duration-300 dark:bg-[#0a0a0a] dark:border-[#7b1113]">
-        <div class="px-4 py-3 flex justify-between items-center max-w-7xl mx-auto w-full">
-            <div>
-                <h1 class="font-nepal font-bold text-2xl flex items-center gap-2 text-[#ffb300] drop-shadow-md tracking-wide">
-                    <i data-lucide="mountain-snow" size="24"></i> TrioSync
-                </h1>
-                <div class="text-[10px] text-gray-400 flex items-center gap-2 mt-0 font-sans tracking-widest"><span id="sync-dot" class="w-2 h-2 bg-green-500 rounded-full"></span><span id="sync-status">Namaste</span></div>
-            </div>
-            <div class="flex items-center gap-2">
-                <button onclick="toggleTheme()" class="text-[#ffb300] hover:bg-white/5 rounded p-2 mr-2"><i id="theme-icon" data-lucide="moon" size="18"></i></button>
-                <div class="bg-[#1c262b] dark:bg-[#1a1a1a] p-1 rounded border border-[#37474f] dark:border-[#333] flex gap-1">
-                    <button id="btn-Yukti" onclick="switchUser('Yukti')" class="px-2 py-1 text-[10px] font-nepal uppercase text-gray-400 hover:text-[#ffb300]">YUK</button>
-                    <button id="btn-Rejith" onclick="switchUser('Rejith')" class="px-2 py-1 text-[10px] font-nepal uppercase text-gray-400 hover:text-[#ffb300]">REJ</button>
-                    <button id="btn-Neha" onclick="switchUser('Neha')" class="px-2 py-1 text-[10px] font-nepal uppercase text-gray-400 hover:text-[#ffb300]">NEH</button>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <div class="hidden md:block bg-[#1c262b] dark:bg-[#0f0f0f] border-b border-[#37474f] dark:border-[#333] shadow-lg shrink-0 relative z-40">
-        <div class="max-w-6xl mx-auto flex justify-center gap-12 px-6 py-4 text-sm text-gray-400">
-            <button onclick="renderTab('planner')" id="d-nav-planner" class="nav-btn active">ITINERARY</button>
-            <button onclick="renderTab('explore')" id="d-nav-explore" class="nav-btn">MAPS</button>
-            <button onclick="renderTab('packing')" id="d-nav-packing" class="nav-btn">TRUNK</button>
-            <button onclick="renderTab('wallet')" id="d-nav-wallet" class="nav-btn">TREASURY</button>
-            <button onclick="toggleSidebar()" class="absolute right-6 text-[#ffb300] hover:scale-110 transition-transform"><i data-lucide="scroll-text"></i></button>
-        </div>
-    </div>
-
-    <div class="flex flex-1 overflow-hidden max-w-7xl mx-auto w-full relative z-0">
-        <main id="app-container" class="flex-1 overflow-y-auto p-4 md:p-8 pb-32 no-scrollbar"></main>
-        
-        <aside id="sidebar" class="fixed inset-0 z-[60] transform translate-x-full transition-transform duration-300 md:translate-x-0 md:static md:block md:w-80 md:my-6 md:mr-6 md:rounded bg-black/80 md:bg-transparent">
-            <div class="absolute right-0 top-0 bottom-0 w-80 bg-[#f9f7f2] dark:bg-[#1a1a1a] border-l-4 border-[#7b1113] dark:border-[#ffb300] shadow-2xl md:w-full md:h-full overflow-y-auto rounded-sm" onclick="event.stopPropagation()">
-                <div class="p-6 h-full flex flex-col relative transition-colors duration-300" id="sidebar-bg">
-                    <div class="flex justify-between items-center mb-6 md:hidden"><h2 class="font-nepal font-bold text-xl text-[#7b1113] dark:text-[#ffb300]">Scrolls</h2><button onclick="toggleSidebar()" class="dark:text-white"><i data-lucide="x"></i></button></div>
-                    <div id="sidebar-content"></div>
-                </div>
-            </div>
-        </aside>
-    </div>
-
-    <nav class="md:hidden fixed bottom-6 left-4 right-4 bg-[#263238] dark:bg-[#0a0a0a] border-2 border-[#ffb300] dark:border-[#7b1113] rounded-full flex justify-around p-3 z-50 shadow-2xl">
-        <button onclick="renderTab('planner')" class="text-gray-400 hover:text-[#ffb300]"><i data-lucide="calendar"></i></button>
-        <button onclick="renderTab('explore')" class="text-gray-400 hover:text-[#ffb300]"><i data-lucide="compass"></i></button>
-        <button onclick="renderTab('packing')" class="text-gray-400 hover:text-[#ffb300]"><i data-lucide="backpack"></i></button>
-        <button onclick="renderTab('wallet')" class="text-gray-400 hover:text-[#ffb300]"><i data-lucide="coins"></i></button>
-        <button onclick="renderTab('notes')" class="text-gray-400 hover:text-[#ffb300]"><i data-lucide="book-open"></i></button>
-        <button onclick="toggleSidebar()" class="text-gray-400 border-l border-gray-600 pl-3"><i data-lucide="menu"></i></button>
-    </nav>
-
-    <div id="wallet-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 fade-in">
-        <div class="himalayan-card w-full max-w-md p-6">
-            <h3 class="font-nepal font-bold text-xl mb-4 text-[#7b1113] dark:text-[#ffb300] border-b border-[#dcdcdc] dark:border-gray-700 pb-2">Add Expense</h3>
-            <input id="w-item" type="text" placeholder="Item Name" class="w-full bg-transparent border-b border-[#7b1113] dark:border-[#ffb300] p-2 font-hand text-xl outline-none mb-3">
-            <div class="flex gap-3 mb-4 items-end">
-                <input id="w-total" type="number" placeholder="Total Amount" class="flex-1 bg-transparent border-b border-[#7b1113] dark:border-[#ffb300] p-1 font-mono text-lg outline-none">
-                <select id="w-currency" class="bg-gray-100 border border-gray-300 p-1 text-xs font-bold rounded h-8">
-                    <option value="INR">INR (₹)</option>
-                    <option value="NPR">NPR (Np)</option>
-                </select>
-            </div>
-
             <div class="flex justify-between items-center mb-2">
                 <div class="text-xs font-nepal text-gray-500 uppercase">Paid By:</div>
                 <button onclick="toggleMultiPayer()" id="multi-payer-btn" class="text-xs font-bold text-[#7b1113] dark:text-[#ffb300] underline">Multiple Payers?</button>
@@ -1127,3 +588,667 @@
     </script>
 </body>
 </html>
+ -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TrioSync V40 - Flight Fix</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Karma:wght@400;600;700&family=Patrick+Hand&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { 
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { 
+                        nepal: ['"Karma"', 'serif'],
+                        serif: ['"Gentium Book Plus"', 'serif'],
+                        hand: ['"Patrick Hand"', 'cursive'],
+                    },
+                    colors: {
+                        maroon: "#7b1113", 
+                        saffron: "#ffb300", 
+                        darkRock: "#263238", 
+                        ricePaper: "#f9f7f2", 
+                        nightRock: "#121212",
+                        nightCard: "#1e1e1e",
+                        ink: "#2c1810",
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.2)',
+                        'glow': '0 0 15px rgba(255, 179, 0, 0.4)'
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        body { background-color: #e8e4db; background-image: url('https://www.transparenttextures.com/patterns/rice-paper-2.png'); color: #263238; overflow: hidden; transition: background-color 0.3s, color 0.3s; }
+        .dark body { background-color: #121212; background-image: url('https://www.transparenttextures.com/patterns/black-scales.png'); color: #e0e0e0; background-blend-mode: normal; }
+        .prayer-flag-border { background: linear-gradient(to right, #0050bc 0%, #0050bc 20%, #ffffff 20%, #ffffff 40%, #dc281e 40%, #dc281e 60%, #178a3d 60%, #178a3d 80%, #ffd400 80%, #ffd400 100%); height: 6px; width: 100%; }
+        .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .fade-in { animation: fadeIn 0.4s ease-out; } @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .himalayan-card { background: #fffef8; border-left: 4px solid #7b1113; border-right: 1px solid #dcdcdc; border-top: 1px solid #dcdcdc; border-bottom: 1px solid #dcdcdc; border-radius: 2px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: relative; transition: all 0.3s; }
+        .dark .himalayan-card { background: #1e1e1e; border-left: 4px solid #ffb300; border-right: 1px solid #333; border-top: 1px solid #333; border-bottom: 1px solid #333; color: #e0e0e0; }
+        input, select { transition: all 0.3s; }
+        .dark input, .dark select { background-color: #2d2d2d !important; color: #fff !important; border-color: #444 !important; }
+        .pack-btn { width: 28px; height: 28px; border: 2px solid; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: 'Karma'; background: rgba(255,255,255,0.8); margin-left: 2px; border-radius: 50%; }
+        .dark .pack-btn { background: rgba(0,0,0,0.5); }
+        .pb-yukti { border-color: #0050bc; color: #0050bc; } .pb-yukti.checked { background-color: #0050bc; color: white; }
+        .pb-rejith { border-color: #178a3d; color: #178a3d; } .pb-rejith.checked { background-color: #178a3d; color: white; }
+        .pb-neha { border-color: #dc281e; color: #dc281e; } .pb-neha.checked { background-color: #dc281e; color: white; }
+        .nav-btn { position: relative; transition: all 0.2s; opacity: 0.7; font-family: 'Karma', serif; letter-spacing: 1px; }
+        .nav-btn:hover { opacity: 1; color: #ffb300; }
+        .nav-btn.active { opacity: 1; color: #ffb300; font-weight: bold; }
+        .nav-btn.active::after { content: '•'; position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); color: #ffb300; font-size: 20px; }
+        .charcoal-notes { background: #3e2723; color: #eec; border: 2px solid #5d4037; font-family: 'Patrick Hand'; font-size: 18px; padding: 10px; line-height: 1.5; }
+        .dark .charcoal-notes { background: #1a1a1a; color: #ccc; border-color: #333; }
+        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    </style>
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+        .then(() => console.log('Service Worker Registered'))
+        .catch((error) => console.log('Service Worker Failed:', error));
+    }
+</script>
+</head>
+<body class="h-screen flex flex-col overflow-hidden text-ink">
+
+    <div class="prayer-flag-border z-50 relative"></div>
+    <header class="bg-[#263238] border-b-2 border-[#ffb300] shadow-soft z-50 shrink-0 relative transition-colors duration-300 dark:bg-[#0a0a0a] dark:border-[#7b1113]">
+        <div class="px-4 py-3 flex justify-between items-center max-w-7xl mx-auto w-full">
+            <div>
+                <h1 class="font-nepal font-bold text-2xl flex items-center gap-2 text-[#ffb300] drop-shadow-md tracking-wide">
+                    <i data-lucide="mountain-snow" size="24"></i> TrioSync
+                </h1>
+                <div class="text-[10px] text-gray-400 flex items-center gap-2 mt-0 font-sans tracking-widest"><span id="sync-dot" class="w-2 h-2 bg-green-500 rounded-full"></span><span id="sync-status">Namaste</span></div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="toggleTheme()" class="text-[#ffb300] hover:bg-white/5 rounded p-2 mr-2"><i id="theme-icon" data-lucide="moon" size="18"></i></button>
+                <div class="bg-[#1c262b] dark:bg-[#1a1a1a] p-1 rounded border border-[#37474f] dark:border-[#333] flex gap-1">
+                    <button id="btn-Yukti" onclick="switchUser('Yukti')" class="px-2 py-1 text-[10px] font-nepal uppercase text-gray-400 hover:text-[#ffb300]">YUK</button>
+                    <button id="btn-Rejith" onclick="switchUser('Rejith')" class="px-2 py-1 text-[10px] font-nepal uppercase text-gray-400 hover:text-[#ffb300]">REJ</button>
+                    <button id="btn-Neha" onclick="switchUser('Neha')" class="px-2 py-1 text-[10px] font-nepal uppercase text-gray-400 hover:text-[#ffb300]">NEH</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="hidden md:block bg-[#1c262b] dark:bg-[#0f0f0f] border-b border-[#37474f] dark:border-[#333] shadow-lg shrink-0 relative z-40">
+        <div class="max-w-6xl mx-auto flex justify-center gap-12 px-6 py-4 text-sm text-gray-400">
+            <button onclick="renderTab('planner')" id="d-nav-planner" class="nav-btn active">ITINERARY</button>
+            <button onclick="renderTab('explore')" id="d-nav-explore" class="nav-btn">MAPS</button>
+            <button onclick="renderTab('packing')" id="d-nav-packing" class="nav-btn">TRUNK</button>
+            <button onclick="renderTab('wallet')" id="d-nav-wallet" class="nav-btn">TREASURY</button>
+            <button onclick="toggleSidebar()" class="absolute right-6 text-[#ffb300] hover:scale-110 transition-transform"><i data-lucide="scroll-text"></i></button>
+        </div>
+    </div>
+
+    <div class="flex flex-1 overflow-hidden max-w-7xl mx-auto w-full relative z-0">
+        <main id="app-container" class="flex-1 overflow-y-auto p-4 md:p-8 pb-32 no-scrollbar"></main>
+        
+        <aside id="sidebar" class="fixed inset-0 z-[60] transform translate-x-full transition-transform duration-300 md:translate-x-0 md:static md:block md:w-80 md:my-6 md:mr-6 md:rounded bg-black/80 md:bg-transparent">
+            <div class="absolute right-0 top-0 bottom-0 w-80 bg-[#f9f7f2] dark:bg-[#1a1a1a] border-l-4 border-[#7b1113] dark:border-[#ffb300] shadow-2xl md:w-full md:h-full overflow-y-auto rounded-sm" onclick="event.stopPropagation()">
+                <div class="p-6 h-full flex flex-col relative transition-colors duration-300" id="sidebar-bg">
+                    <div class="flex justify-between items-center mb-6 md:hidden"><h2 class="font-nepal font-bold text-xl text-[#7b1113] dark:text-[#ffb300]">Scrolls</h2><button onclick="toggleSidebar()" class="dark:text-white"><i data-lucide="x"></i></button></div>
+                    <div id="sidebar-content"></div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <nav class="md:hidden fixed bottom-6 left-4 right-4 bg-[#263238] dark:bg-[#0a0a0a] border-2 border-[#ffb300] dark:border-[#7b1113] rounded-full flex justify-around p-3 z-50 shadow-2xl">
+        <button onclick="renderTab('planner')" class="text-gray-400 hover:text-[#ffb300]"><i data-lucide="calendar"></i></button>
+        <button onclick="renderTab('explore')" class="text-gray-400 hover:text-[#ffb300]"><i data-lucide="compass"></i></button>
+        <button onclick="renderTab('packing')" class="text-gray-400 hover:text-[#ffb300]"><i data-lucide="backpack"></i></button>
+        <button onclick="renderTab('wallet')" class="text-gray-400 hover:text-[#ffb300]"><i data-lucide="coins"></i></button>
+        <button onclick="renderTab('notes')" class="text-gray-400 hover:text-[#ffb300]"><i data-lucide="book-open"></i></button>
+        <button onclick="toggleSidebar()" class="text-gray-400 border-l border-gray-600 pl-3"><i data-lucide="menu"></i></button>
+    </nav>
+
+    <div id="wallet-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 fade-in">
+        <div class="himalayan-card w-full max-w-md p-6">
+            <h3 class="font-nepal font-bold text-xl mb-4 text-[#7b1113] dark:text-[#ffb300] border-b border-[#dcdcdc] dark:border-gray-700 pb-2">Add Expense</h3>
+            <input id="w-item" type="text" placeholder="Item Name" class="w-full bg-transparent border-b border-[#7b1113] dark:border-[#ffb300] p-2 font-hand text-xl outline-none mb-3">
+            <div class="flex gap-3 mb-4 items-end">
+                <input id="w-total" type="number" placeholder="Total Amount" class="flex-1 bg-transparent border-b border-[#7b1113] dark:border-[#ffb300] p-1 font-mono text-lg outline-none">
+                <select id="w-currency" class="bg-gray-100 border border-gray-300 p-1 text-xs font-bold rounded h-8">
+                    <option value="INR">INR (₹)</option>
+                    <option value="NPR">NPR (Np)</option>
+                </select>
+            </div>
+
+            <div class="flex justify-between items-center mb-2">
+                <div class="text-xs font-nepal text-gray-500 uppercase">Paid By:</div>
+                <button onclick="toggleMultiPayer()" id="multi-payer-btn" class="text-xs font-bold text-[#7b1113] dark:text-[#ffb300] underline">Multiple Payers?</button>
+            </div>
+            <div id="single-payer-opts" class="grid grid-cols-3 gap-2 mb-4">
+                <button onclick="tempPayer='Yukti'; updatePayerUI(this)" class="payer-opt border border-gray-300 p-2 rounded text-xs font-bold uppercase">Yukti</button>
+                <button onclick="tempPayer='Rejith'; updatePayerUI(this)" class="payer-opt border border-gray-300 p-2 rounded text-xs font-bold uppercase">Rejith</button>
+                <button onclick="tempPayer='Neha'; updatePayerUI(this)" class="payer-opt border border-gray-300 p-2 rounded text-xs font-bold uppercase">Neha</button>
+            </div>
+            <div id="multi-payer-opts" class="hidden bg-gray-50 dark:bg-[#121212] p-3 border border-dashed border-gray-300 dark:border-gray-700 mb-4 rounded text-sm space-y-2 font-mono">
+                <div class="flex gap-2 items-center"><span>Y:</span><input id="mp-yukti" type="number" class="w-full bg-transparent border-b border-gray-300 text-center" placeholder="Yukti Paid"></div>
+                <div class="flex gap-2 items-center"><span>R:</span><input id="mp-rejith" type="number" class="w-full bg-transparent border-b border-gray-300 text-center" placeholder="Rejith Paid"></div>
+                <div class="flex gap-2 items-center"><span>N:</span><input id="mp-neha" type="number" class="w-full bg-transparent border-b border-gray-300 text-center" placeholder="Neha Paid"></div>
+            </div>
+
+            <div class="bg-gray-50 dark:bg-[#121212] p-3 border border-dashed border-gray-300 dark:border-gray-700 mb-6 rounded text-sm">
+                <div class="flex justify-between mb-2">
+                    <span class="font-nepal uppercase text-gray-500 text-xs">Split</span>
+                    <button onclick="splitEvenly()" class="text-xs font-bold text-[#7b1113] dark:text-[#ffb300] underline">Split Evenly</button>
+                </div>
+                <div class="space-y-2 font-mono">
+                    <div class="flex gap-2 items-center"><span>Y:</span><input id="amt-yukti" type="number" class="w-full bg-transparent border-b border-gray-300 text-center"></div>
+                    <div class="flex gap-2 items-center"><span>R:</span><input id="amt-rejith" type="number" class="w-full bg-transparent border-b border-gray-300 text-center"></div>
+                    <div class="flex gap-2 items-center"><span>N:</span><input id="amt-neha" type="number" class="w-full bg-transparent border-b border-gray-300 text-center"></div>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeModal('wallet-modal')" class="flex-1 py-2 font-nepal text-gray-500">Cancel</button>
+                <button onclick="saveExpense()" class="flex-1 py-2 bg-[#7b1113] dark:bg-[#ffb300] text-white dark:text-black font-nepal font-bold shadow-lg rounded">Confirm</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="flight-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 fade-in">
+        <div class="himalayan-card w-full max-w-md p-6">
+            <h3 class="font-nepal font-bold text-xl mb-4 text-[#7b1113] dark:text-[#ffb300]">Boarding Pass</h3>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <input id="f-from" type="text" placeholder="From" class="bg-transparent border-b border-gray-300 dark:border-gray-600 p-1 font-serif text-lg outline-none">
+                <input id="f-to" type="text" placeholder="To" class="bg-transparent border-b border-gray-300 dark:border-gray-600 p-1 font-serif text-lg outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-2 mb-4">
+                <input id="f-airline" type="text" placeholder="Airline" class="bg-transparent border-b border-gray-300 dark:border-gray-600 p-1 text-sm">
+                <input id="f-no" type="text" placeholder="Flight #" class="bg-transparent border-b border-gray-300 dark:border-gray-600 p-1 text-sm">
+            </div>
+            <div class="grid grid-cols-4 gap-2 mb-6">
+                <input id="f-time" type="time" class="bg-transparent border-b border-gray-300 dark:border-gray-600 p-1 text-sm col-span-2">
+                <input id="f-gate" type="text" placeholder="Gate" class="bg-transparent border-b border-gray-300 dark:border-gray-600 p-1 text-sm">
+                <input id="f-seat" type="text" placeholder="Seat" class="bg-transparent border-b border-gray-300 dark:border-gray-600 p-1 text-sm">
+            </div>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeModal('flight-modal')" class="px-4 py-2 font-nepal text-gray-500">Discard</button>
+                <button onclick="saveFlight()" class="px-6 py-2 bg-[#263238] dark:bg-[#ffb300] text-[#ffb300] dark:text-black font-nepal shadow-lg rounded">Save Ticket</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const SUPABASE_URL = 'https://rpdaituulgowvgzxjaeh.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZGFpdHV1bGdvd3ZnenhqYWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY3NDgyMzEsImV4cCI6MjA4MjMyNDIzMX0.pq8398t-2laAuo_V69gZBl_kQ6Yjp6_RgroYMFxBfQA';
+        const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const USERS = ['Yukti', 'Rejith', 'Neha'];
+        
+        // --- STATE MANAGEMENT ---
+        let currentUser = localStorage.getItem('trio_user') || null;
+        let tempPayer = currentUser || 'Yukti';
+        let isMultiPayer = false;
+        let isBookOpen = false;
+        let currentSpreadIndex = 0; 
+        let isDirty = false; 
+
+        // Default State
+        let state = { 
+            settings: { startDate: '2025-01-01', duration: 3 }, 
+            expenses: [], 
+            flights: [], 
+            itinerary: {}, 
+            packing: { 'General': [] }, 
+            explore: { 'Food': [], 'Places': [] }, 
+            photoAlbum: '', 
+            scratchpad: '' 
+        };
+
+        // --- INITIALIZATION ---
+        window.onload = () => { 
+            lucide.createIcons(); 
+            checkLogin(); 
+            registerSW();
+            const localData = localStorage.getItem('trip_smart_data');
+            if (localData) {
+                try {
+                    state = JSON.parse(localData);
+                    ensureIDs(); 
+                } catch(e) { console.error("Corrupt local data", e); }
+            }
+            refreshUI();
+            syncLoop();
+            setInterval(syncLoop, 4000); 
+            if(localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+            updateThemeIcon();
+        };
+
+        function registerSW() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js').catch(console.error);
+            }
+        }
+
+        function checkLogin() { 
+            if (!currentUser || !USERS.includes(currentUser)) { 
+                const u = prompt("Who are you? (Yukti, Rejith, Neha)"); 
+                if(USERS.includes(u)){ currentUser = u; localStorage.setItem('trio_user', u); location.reload(); } 
+                else alert("Access Denied."); 
+            } 
+            updateUserUI(); 
+        }
+
+        // --- SYNC ENGINE ---
+        async function syncLoop() {
+            if (!navigator.onLine) {
+                document.getElementById('sync-status').innerText = "Offline (Saved)";
+                document.getElementById('sync-dot').className = "w-2 h-2 bg-orange-500 rounded-full";
+                return;
+            }
+            try {
+                const { data } = await client.from('trip_data').select('app_state').eq('id', 1).single();
+                if (data?.app_state) {
+                    const cloud = data.app_state;
+                    let hasChanges = false;
+                    
+                    const newExpenses = smartMerge(state.expenses, cloud.expenses);
+                    if(JSON.stringify(newExpenses) !== JSON.stringify(state.expenses)) { state.expenses = newExpenses; hasChanges = true; }
+
+                    const newFlights = smartMerge(state.flights, cloud.flights);
+                    if(JSON.stringify(newFlights) !== JSON.stringify(state.flights)) { state.flights = newFlights; hasChanges = true; }
+
+                    ['itinerary', 'packing', 'explore'].forEach(key => {
+                        const allKeys = new Set([...Object.keys(state[key]), ...Object.keys(cloud[key] || {})]);
+                        allKeys.forEach(k => {
+                            const localArr = state[key][k] || [];
+                            const cloudArr = (cloud[key] || {})[k] || [];
+                            const mergedArr = smartMerge(localArr, cloudArr);
+                            if(JSON.stringify(mergedArr) !== JSON.stringify(localArr)) {
+                                state[key][k] = mergedArr;
+                                hasChanges = true;
+                            }
+                        });
+                    });
+
+                    if(!isDirty && cloud.scratchpad !== state.scratchpad) { state.scratchpad = cloud.scratchpad; hasChanges = true; }
+                    if(!isDirty && cloud.photoAlbum !== state.photoAlbum) { state.photoAlbum = cloud.photoAlbum; hasChanges = true; }
+                    
+                    if(hasChanges) {
+                        localStorage.setItem('trip_smart_data', JSON.stringify(state));
+                        refreshUI();
+                    }
+                }
+
+                if (isDirty) {
+                    document.getElementById('sync-status').innerText = "Syncing...";
+                    await client.from('trip_data').update({ app_state: state }).eq('id', 1);
+                    isDirty = false;
+                    document.getElementById('sync-status').innerText = "Live";
+                    document.getElementById('sync-dot').className = "w-2 h-2 bg-green-500 rounded-full";
+                } else {
+                    document.getElementById('sync-status').innerText = "Live";
+                    document.getElementById('sync-dot').className = "w-2 h-2 bg-green-500 rounded-full";
+                }
+            } catch (e) { console.error("Sync Error", e); }
+        }
+
+        function smartMerge(localList, cloudList) {
+            if (!localList) localList = [];
+            if (!cloudList) cloudList = [];
+            const map = new Map();
+            localList.forEach(item => { if(item.id) map.set(item.id, item); });
+            cloudList.forEach(cItem => {
+                if(!cItem.id) return; 
+                if (map.has(cItem.id)) {
+                    const lItem = map.get(cItem.id);
+                    if ((cItem.updatedAt || 0) > (lItem.updatedAt || 0)) {
+                        map.set(cItem.id, cItem);
+                    }
+                } else {
+                    map.set(cItem.id, cItem);
+                }
+            });
+            return Array.from(map.values());
+        }
+
+        const uid = () => Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        
+        function ensureIDs() {
+            const fix = (arr) => { if(arr) arr.forEach(i => { if(!i.id) i.id = uid(); if(!i.updatedAt) i.updatedAt = 0; if(!i.deleted) i.deleted=false; }); };
+            if(state.expenses) fix(state.expenses);
+            if(state.flights) fix(state.flights);
+            if(state.packing) Object.values(state.packing).forEach(fix);
+            if(state.explore) Object.values(state.explore).forEach(fix);
+            if(state.itinerary) Object.values(state.itinerary).forEach(fix);
+        }
+
+        function persist() {
+            localStorage.setItem('trip_smart_data', JSON.stringify(state));
+            isDirty = true;
+            refreshUI();
+            if(navigator.onLine) syncLoop();
+        }
+
+        // --- UI RENDERERS ---
+
+        function refreshUI() { const active = document.querySelector('.nav-btn.active')?.id.replace('d-nav-', '') || 'planner'; renderTab(active); renderSidebar(); }
+        
+        function renderTab(tabName) { 
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active', 'text-[#ffb300]')); 
+            const dBtn = document.getElementById(`d-nav-${tabName}`); 
+            if(dBtn) dBtn.classList.add('active', 'text-[#ffb300]'); 
+            const container = document.getElementById('app-container'); 
+            container.innerHTML = ''; 
+            if(tabName === 'planner') renderPlanner(container); 
+            if(tabName === 'explore') renderExplore(container); 
+            if(tabName === 'packing') renderPacking(container); 
+            if(tabName === 'wallet') renderWallet(container); 
+            if(tabName === 'notes') renderNotes(container);
+            lucide.createIcons(); 
+        }
+
+        // PACKING
+        function renderPacking(c) {
+            let h = `<div class="fade-in grid grid-cols-1 md:grid-cols-2 gap-6 pb-24">`;
+            for(const [cat, items] of Object.entries(state.packing)) {
+                h += `<div class="himalayan-card p-4"><div class="flex justify-between border-b border-gray-300 dark:border-gray-600 pb-2 mb-3"><span class="font-nepal font-bold text-[#7b1113] dark:text-[#ffb300] uppercase tracking-wider">${cat}</span><button onclick="removePackingCategory('${cat}')" class="text-gray-400 hover:text-red-500">x</button></div><div class="space-y-2">`;
+                items.filter(i => !i.deleted).forEach((item) => {
+                    const assigned = item.assigned || ['Yukti','Rejith','Neha'];
+                    const completed = item.completed || [];
+                    h += `<div class="flex items-center gap-2 border-b border-dashed border-gray-200 dark:border-gray-700 pb-1"><span class="flex-1 font-serif text-lg">${item.name}</span><div class="flex gap-1">`;
+                    ['Yukti', 'Rejith', 'Neha'].forEach(p => { if(assigned.includes(p)) { const isDone = completed.includes(p); let btnClass = ""; if(p === 'Yukti') btnClass = `pb-yukti ${isDone?'checked':''}`; if(p === 'Rejith') btnClass = `pb-rejith ${isDone?'checked':''}`; if(p === 'Neha') btnClass = `pb-neha ${isDone?'checked':''}`; h += `<button onclick="togglePack('${cat}','${item.id}','${p}')" class="pack-btn ${btnClass}">${p.charAt(0)}</button>`; } });
+                    h += `</div><button onclick="removePackItem('${cat}','${item.id}')" class="text-gray-400 hover:text-[#7b1113] dark:hover:text-[#ffb300] ml-2"><i data-lucide="trash-2" size="14"></i></button></div>`;
+                });
+                h += `</div><div class="flex flex-col gap-2 mt-4 pt-2 border-t border-gray-300 dark:border-gray-600"><div class="flex items-center gap-2"><span class="text-[10px] font-nepal uppercase text-gray-500">Assign:</span><div class="flex gap-1" id="assign-${cat}"><button onclick="this.classList.toggle('bg-[#7b1113]'); this.classList.toggle('text-white')" class="text-[10px] border border-gray-400 px-1 rounded bg-[#7b1113] text-white" data-user="Yukti">Y</button><button onclick="this.classList.toggle('bg-[#7b1113]'); this.classList.toggle('text-white')" class="text-[10px] border border-gray-400 px-1 rounded bg-[#7b1113] text-white" data-user="Rejith">R</button><button onclick="this.classList.toggle('bg-[#7b1113]'); this.classList.toggle('text-white')" class="text-[10px] border border-gray-400 px-1 rounded bg-[#7b1113] text-white" data-user="Neha">N</button></div></div><div class="flex gap-2"><input id="add-${cat}-name" placeholder="Item Name..." class="flex-1 bg-transparent border-b border-gray-300 dark:border-gray-600 font-hand text-lg"><button onclick="addPackItem('${cat}')" class="font-bold text-[#7b1113] dark:text-[#ffb300]">+</button></div></div></div>`;
+            } 
+            h += `<button onclick="addPackingCategory()" class="w-full py-4 border-2 border-dashed border-[#7b1113] dark:border-[#ffb300] text-[#7b1113] dark:text-[#ffb300] font-nepal uppercase tracking-widest col-span-1 md:col-span-2 shadow-sm mb-8 hover:bg-[#fffef8] dark:hover:bg-[#333]">+ Create List</button></div>`;
+            c.innerHTML = h;
+        }
+        function addPackItem(cat) { const name = document.getElementById(`add-${cat}-name`).value; if(!name) return; const container = document.getElementById(`assign-${cat}`); const assigned = []; Array.from(container.children).forEach(btn => { if(btn.classList.contains('bg-[#7b1113]')) assigned.push(btn.getAttribute('data-user')); }); if(assigned.length === 0) assigned.push('Yukti','Rejith','Neha'); 
+            state.packing[cat].push({ id: uid(), updatedAt: Date.now(), name, assigned, completed: [], deleted: false }); persist(); 
+        }
+        function togglePack(cat, itemId, person) { 
+            const item = state.packing[cat].find(i => i.id === itemId); 
+            if(item) {
+                if(!item.completed) item.completed=[]; 
+                if(item.completed.includes(person)) item.completed = item.completed.filter(p => p !== person); else item.completed.push(person); 
+                item.updatedAt = Date.now();
+                persist(); 
+            }
+        }
+        function removePackItem(cat, itemId) { 
+            if(state.packing[cat]) {
+                const i = state.packing[cat].find(x => String(x.id) === String(itemId));
+                if(i) {
+                    i.deleted = true;
+                    i.updatedAt = Date.now();
+                    persist();
+                }
+            }
+        }
+        function addPackingCategory() { const name = prompt("List Name:"); if(name && !state.packing[name]) { state.packing[name] = []; persist(); } }
+        function removePackingCategory(cat) { if(confirm('Delete "'+cat+'"?')) { delete state.packing[cat]; persist(); } }
+
+        // PLANNER
+        function renderPlanner(c) {
+            let h = `<div class="fade-in max-w-4xl mx-auto space-y-8 pl-6 relative pb-24"><div class="himalayan-card p-6 relative mb-8"><div class="flex justify-between items-center mb-4 border-b border-[#dcdcdc] dark:border-gray-700 pb-2"><h2 class="font-nepal text-2xl text-[#7b1113] dark:text-[#ffb300] tracking-widest">Flight Deck</h2><button onclick="openModal('flight-modal')" class="bg-[#263238] dark:bg-[#ffb300] text-[#ffb300] dark:text-black px-3 py-1 font-bold font-nepal text-xs rounded shadow-sm">+ TICKET</button></div>${state.flights.filter(f => !f.deleted).length === 0 ? '<div class="text-center font-hand text-xl opacity-50 py-4">No flights added.</div>' : ''}${state.flights.filter(f => !f.deleted).map((f) => `<div class="relative group mb-4 p-4 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#252525]"><button onclick="removeFlight('${f.id}')" class="absolute top-2 right-2 text-red-800 font-bold hover:scale-110">x</button><div class="flex justify-between items-end border-b border-gray-300 dark:border-gray-600 pb-2 mb-2"><div><div class="font-nepal text-xs text-gray-500">DEPART</div><div class="font-nepal text-3xl text-[#2c1810] dark:text-white">${f.from}</div></div><div class="text-center"><div class="font-mono text-xs text-[#7b1113] dark:text-[#ffb300]">${f.time}</div><i data-lucide="plane" class="text-[#ffb300]" size="24"></i></div><div class="text-right"><div class="font-nepal text-xs text-gray-500">ARRIVE</div><div class="font-nepal text-3xl text-[#2c1810] dark:text-white">${f.to}</div></div></div><div class="font-mono text-xs text-[#7b1113] dark:text-[#ffb300] mt-2"><div class="w-full truncate font-bold mb-1">AIR: ${f.airline}</div><div class="flex justify-between border-t border-dashed border-gray-400 dark:border-gray-600 pt-1"><span>FL: ${f.no}</span><span>GT: ${f.gate || '-'}</span><span>ST: ${f.seat || '-'}</span></div></div></div>`).join('')}</div><div class="absolute left-6 top-0 bottom-0 w-1 bg-[#ffb300] dark:bg-[#7b1113]"></div>`;
+            for(let i=1; i<=state.settings.duration; i++){ const k=`Day ${i}`; if(!state.itinerary[k])state.itinerary[k]=[]; h+=`<div class="relative pl-10"><div class="absolute left-[-9px] top-0 w-5 h-5 bg-[#7b1113] dark:bg-[#ffb300] rotate-45 border-2 border-[#ffb300] dark:border-[#7b1113] z-10"></div><div class="himalayan-card p-5 mb-6"><div class="flex justify-between items-center border-b border-[#dcdcdc] dark:border-gray-700 pb-2 mb-3"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300] font-bold">${k}</span><button onclick="addActivity('${k}')" class="text-xs border border-gray-400 px-2 rounded">+ Event</button></div><div class="space-y-3">${state.itinerary[k].filter(a => !a.deleted).map((a)=>`<div class="flex gap-4 font-serif text-[#2c1810] dark:text-gray-300 items-center group"><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300] bg-[#f9f7f2] dark:bg-[#333] px-2 border border-gray-300 dark:border-gray-600">${a.time}</span><span class="flex-1 text-lg border-b border-dotted border-gray-400 dark:border-gray-600">${a.text}</span><button onclick="removeActivity('${k}','${a.id}')" class="text-gray-400 opacity-50 hover:text-red-800"><i data-lucide="x" size="14"></i></button></div>`).join('')}</div></div></div>`; } 
+            
+            // Add/Remove Days Controls
+            h += `<div class="flex justify-center gap-4 mt-8 pb-4">
+                    <button onclick="changeDuration(-1)" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded font-nepal text-sm hover:bg-[#ffb300] dark:hover:bg-[#ffb300] dark:hover:text-black">- Remove Day</button>
+                    <button onclick="changeDuration(1)" class="px-3 py-1 bg-[#7b1113] dark:bg-[#ffb300] text-white dark:text-black rounded font-nepal font-bold shadow-sm hover:opacity-90">+ Add Day</button>
+                  </div>`;
+            
+            c.innerHTML=h+`</div>`;
+        }
+        function saveFlight() { const getVal = (id) => document.getElementById(id) ? document.getElementById(id).value : ''; const f = { id: uid(), updatedAt: Date.now(), from: getVal('f-from'), to: getVal('f-to'), airline: getVal('f-airline'), no: getVal('f-no'), time: getVal('f-time'), term: getVal('f-term'), gate: getVal('f-gate'), seat: getVal('f-seat'), deleted: false }; if(f.from){ state.flights.push(f); closeModal('flight-modal'); persist(); } }
+        function removeFlight(id) { 
+            if(confirm('Delete Flight?')){ 
+                const f = state.flights.find(x => String(x.id) === String(id));
+                if(f) {
+                    f.deleted = true;
+                    f.updatedAt = Date.now();
+                    persist();
+                }
+            } 
+        }
+        function addActivity(day) { const t=prompt("Activity:"); if(t){ state.itinerary[day].push({ id: uid(), updatedAt: Date.now(), time:prompt("Time:","12:00"), text:t, deleted: false }); state.itinerary[day].sort((a,b)=>a.time.localeCompare(b.time)); persist(); } }
+        function removeActivity(day, id) { 
+            if(state.itinerary[day]) {
+                const i = state.itinerary[day].find(x => String(x.id) === String(id));
+                if(i) {
+                    i.deleted = true;
+                    i.updatedAt = Date.now();
+                    persist();
+                }
+            }
+        }
+        function changeDuration(delta) {
+            state.settings.duration = Math.max(1, state.settings.duration + delta);
+            persist();
+        }
+
+        // WALLET - MODIFIED TO GROUP BY DATE, SHOW FULL DETAIL, AND FIX MATH DECIMALS
+        function renderWallet(c) {
+            try {
+                let {settlements} = calculateSettlements();
+                // Sort descending by time (newest first)
+                let activeExpenses = state.expenses.filter(e => !e.deleted).sort((a,b) => b.updatedAt - a.updatedAt); 
+                
+                let totalINR = activeExpenses.reduce((s,i) => { let amt = i.currency === 'NPR' ? i.total / 1.6 : i.total; return s + amt; }, 0);
+                let myShare = activeExpenses.reduce((s,i) => { 
+                    let amt = i.currency === 'NPR' ? i.total / 1.6 : i.total; 
+                    let myPortion = (i.split && i.split[currentUser]) ? i.split[currentUser] : 0; 
+                    if(i.currency === 'NPR') myPortion = myPortion / 1.6; 
+                    return s + myPortion; 
+                }, 0);
+
+                // Group expenses by Date
+                let groupedExpenses = {};
+                activeExpenses.forEach(e => {
+                    let d = new Date(e.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                    if (!groupedExpenses[d]) groupedExpenses[d] = { expenses: [], totalINR: 0 };
+                    groupedExpenses[d].expenses.push(e);
+                    groupedExpenses[d].totalINR += (e.currency === 'NPR' ? e.total / 1.6 : e.total);
+                });
+
+                // Generate HTML for grouped expenses
+                let expensesHTML = Object.entries(groupedExpenses).map(([date, group]) => {
+                    let groupHTML = `<div class="font-nepal font-bold text-[#7b1113] dark:text-[#ffb300] tracking-widest uppercase border-b border-gray-300 dark:border-gray-700 pb-1 mt-8 mb-4 flex justify-between shadow-sm">
+                        <span>${date}</span>
+                        <span>Day Total: ₹${Math.round(group.totalINR)}</span>
+                    </div>`;
+
+                    groupHTML += group.expenses.map(e => {
+                        // Figure out the split text
+                        let splitText = "";
+                        let sY = Math.round(e.split.Yukti), sR = Math.round(e.split.Rejith), sN = Math.round(e.split.Neha);
+                        if (Math.abs(e.split.Yukti - e.split.Rejith) < 0.1 && Math.abs(e.split.Rejith - e.split.Neha) < 0.1) {
+                            splitText = "Split Evenly";
+                        } else {
+                            splitText = `Yukti: ${sY}, Rejith: ${sR}, Neha: ${sN}`;
+                        }
+
+                        // Figure out paid by text
+                        let paidText = e.paidBy;
+                        if (e.paidBy === 'Multiple' && e.paidAmounts) {
+                            let p = [];
+                            if (e.paidAmounts.Yukti > 0) p.push(`Y: ${Math.round(e.paidAmounts.Yukti)}`);
+                            if (e.paidAmounts.Rejith > 0) p.push(`R: ${Math.round(e.paidAmounts.Rejith)}`);
+                            if (e.paidAmounts.Neha > 0) p.push(`N: ${Math.round(e.paidAmounts.Neha)}`);
+                            paidText = `Multiple (${p.join(', ')})`;
+                        }
+
+                        return `<div class="himalayan-card p-4 flex justify-between items-center mb-4">
+                            <div class="flex-1">
+                                <div class="font-serif text-xl font-bold">${e.item} <span class="text-xs font-normal text-gray-500">(${e.currency||'INR'})</span></div>
+                                <div class="text-xs font-nepal text-gray-400 uppercase tracking-widest mt-1">Paid By: <span class="text-[#2c1810] dark:text-gray-300">${paidText}</span></div>
+                                <div class="text-xs font-sans text-gray-500 mt-1 italic border-l-2 border-gray-300 pl-2">Split: ${splitText}</div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300]">${(e.currency==='NPR'?'Np ':'₹') + Math.round(e.total)}</span>
+                                <button onclick="removeExpense('${e.id}')" class="text-gray-400 hover:text-red-800"><i data-lucide="trash-2" size="16"></i></button>
+                            </div>
+                        </div>`;
+                    }).join('');
+
+                    return groupHTML;
+                }).join('');
+                
+                let h = `<div class="fade-in max-w-3xl mx-auto space-y-8 pb-24"><div class="bg-[#f9f7f2] dark:bg-[#1e1e1e] p-3 rounded border border-[#dcdcdc] dark:border-gray-600 flex justify-between items-center text-sm shadow-sm"><div class="flex gap-2 items-center"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">₹ INR</span><input id="calc-inr" type="number" class="w-16 bg-white border p-1" oninput="convert('inr')"></div><i data-lucide="arrow-right-left" size="14" class="text-gray-400"></i><div class="flex gap-2 items-center"><input id="calc-npr" type="number" class="w-16 bg-white border p-1" oninput="convert('npr')"><span class="font-bold text-[#7b1113] dark:text-[#ffb300]">NPR</span></div></div><div class="bg-[#263238] border-b-4 border-[#ffb300] p-8 rounded shadow-lg relative overflow-hidden"><div class="relative z-10 flex justify-between items-center text-[#ffb300]"><div><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">TOTAL SPENT (INR)</div><div class="font-nepal text-5xl">₹${Math.round(totalINR)}</div></div><div class="text-right"><div class="font-nepal text-xs tracking-widest mb-1 opacity-70">YOUR SHARE</div><div class="font-nepal text-3xl">₹${Math.round(myShare)}</div></div></div><button onclick="openModal('wallet-modal')" class="w-full mt-6 bg-[#ffb300] text-[#263238] py-3 font-bold font-nepal hover:bg-white transition-colors rounded">ADD EXPENSE</button></div><div class="himalayan-card p-6 relative mt-6"><div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#7b1113] dark:bg-[#ffb300] text-white dark:text-black px-4 py-1 font-nepal text-xs uppercase rounded">Settlement</div><div class="space-y-2 font-serif italic text-gray-700 dark:text-gray-300 text-center mt-4">${settlements.length===0?'<div class="opacity-50">Balanced.</div>':settlements.map(s=>`<div class="flex justify-between border-b border-dashed border-gray-300 pb-1"><span>${s.split('₹')[0]}</span><span class="font-bold font-nepal text-[#7b1113] dark:text-[#ffb300]">₹${s.split('₹')[1]}</span></div>`).join('')}</div></div><div class="space-y-2">${activeExpenses.length === 0 ? '<div class="text-center opacity-50 py-4">No expenses recorded yet.</div>' : expensesHTML}</div></div>`; c.innerHTML = h;
+            } catch(e) {
+                c.innerHTML = `<div class="p-4 text-red-500">Error loading wallet: ${e.message}</div>`;
+                console.error(e);
+            }
+        }
+
+        // FIXED DECIMAL MATH SO IT DOESN'T SKIP SETTLEMENTS
+        function calculateSettlements() { 
+            let b={'Yukti':0,'Rejith':0,'Neha':0}; 
+            state.expenses.filter(e => !e.deleted).forEach(e => { 
+                let factor = e.currency === 'NPR' ? 1.6 : 1; 
+                if (e.paidAmounts) {
+                    Object.entries(e.paidAmounts).forEach(([p, amt]) => {
+                        b[p] += (amt / factor);
+                    });
+                } else {
+                    let paidINR = e.total / factor; 
+                    b[e.paidBy] += paidINR; 
+                }
+                if(e.split) Object.entries(e.split).forEach(([p,a]) => { b[p] -= (a / factor); }); 
+            }); 
+            let d=[],c=[]; 
+            // Fixed the condition from < -1 to < -0.01 to account for float math errors
+            Object.entries(b).forEach(([p,a])=>{if(a < -0.01) d.push({p,a}); if(a > 0.01) c.push({p,a})}); 
+            let s=[]; let i=0,j=0; 
+            while(i<d.length && j<c.length){ 
+                let amt=Math.min(Math.abs(d[i].a),c[j].a); 
+                if(amt < 0.01) break; // Float safety breaker
+                s.push(`${d[i].p} pays ${c[j].p} ₹${Math.round(amt)}`); 
+                d[i].a+=amt; c[j].a-=amt; 
+                if(Math.abs(d[i].a)<0.01)i++; 
+                if(c[j].a<0.01)j++; 
+            } 
+            return {balances:b, settlements:s}; 
+        }
+
+        function splitEvenly() {
+            const total = parseFloat(document.getElementById('w-total').value);
+            if(total > 0) {
+                const split = (total / 3).toFixed(2);
+                const u = document.getElementById('amt-yukti'); if(u) u.value = split;
+                const r = document.getElementById('amt-rejith'); if(r) r.value = split;
+                const n = document.getElementById('amt-neha'); if(n) n.value = split;
+            }
+        }
+        function saveExpense() { 
+            const item=document.getElementById('w-item').value, currency=document.getElementById('w-currency').value;
+            const y=parseFloat(document.getElementById('amt-yukti').value)||0, r=parseFloat(document.getElementById('amt-rejith').value)||0, n=parseFloat(document.getElementById('amt-neha').value)||0, total=y+r+n; 
+            
+            let finalPaidBy = tempPayer;
+            let finalPaidAmounts = null;
+
+            if (isMultiPayer) {
+                const py = parseFloat(document.getElementById('mp-yukti').value)||0;
+                const pr = parseFloat(document.getElementById('mp-rejith').value)||0;
+                const pn = parseFloat(document.getElementById('mp-neha').value)||0;
+                if (Math.abs((py+pr+pn) - total) > 0.1) {
+                    alert("Multiple Payer amounts must equal the Total Amount!");
+                    return;
+                }
+                finalPaidBy = 'Multiple';
+                finalPaidAmounts = { 'Yukti': py, 'Rejith': pr, 'Neha': pn };
+            }
+
+            if(item&&total>0){ 
+                state.expenses.unshift({id:uid(), updatedAt: Date.now(), item, total, currency, paidBy:finalPaidBy, paidAmounts: finalPaidAmounts, split:{'Yukti':y,'Rejith':r,'Neha':n}, deleted: false}); 
+                closeModal('wallet-modal'); 
+                persist(); 
+            } 
+        }
+        function toggleMultiPayer() {
+            isMultiPayer = !isMultiPayer;
+            document.getElementById('single-payer-opts').classList.toggle('hidden', isMultiPayer);
+            document.getElementById('multi-payer-opts').classList.toggle('hidden', !isMultiPayer);
+            document.getElementById('multi-payer-btn').innerText = isMultiPayer ? "Single Payer?" : "Multiple Payers?";
+        }
+        function removeExpense(id) { 
+            if(confirm("Delete expense?")) {
+                const e = state.expenses.find(x => String(x.id) === String(id));
+                if(e) {
+                    e.deleted = true;
+                    e.updatedAt = Date.now();
+                    persist();
+                }
+            }
+        }
+
+        // EXPLORE
+        function renderExplore(c) { let h=`<div class="fade-in grid md:grid-cols-2 gap-8 pb-24">`; for(const [k,v] of Object.entries(state.explore)){h+=`<div class="himalayan-card p-6"><div class="flex justify-between border-b border-gray-300 dark:border-gray-600 pb-2 mb-4"><span class="font-nepal text-xl text-[#7b1113] dark:text-[#ffb300] uppercase tracking-widest">${k}</span></div><div class="space-y-3">${v.filter(x => !x.deleted).map((x)=>`<div class="flex items-center gap-3 border-b border-dashed border-gray-200 dark:border-gray-700 pb-2"><div onclick="toggleItem('explore','${k}','${x.id}')" class="w-6 h-6 border-2 border-gray-400 flex items-center justify-center cursor-pointer">${x.done?'<i data-lucide="check" class="text-[#178a3d]" size="14"></i>':''}</div><span class="${x.done?'line-through opacity-50':''} flex-1 font-serif text-xl">${x.name}</span><button onclick="removeExploreItem('${k}','${x.id}')" class="text-gray-400 hover:text-red-800">x</button></div>`).join('')}<input onkeydown="if(event.key==='Enter')addItem(this,'explore','${k}')" placeholder="+ Add..." class="w-full bg-transparent font-hand text-xl p-2 outline-none"></div></div>`;} c.innerHTML=h+`</div>`; }
+        function addItem(input, type, cat) { if(input.value.trim()){ state[type][cat].push({ id: uid(), updatedAt: Date.now(), name:input.value, done:false, deleted: false }); persist(); } }
+        function toggleItem(type, cat, id) { const i = state[type][cat].find(x => x.id === id); if(i) { i.done = !i.done; i.updatedAt = Date.now(); persist(); } }
+        function removeExploreItem(cat, id) { 
+            if(state.explore[cat]) {
+                const i = state.explore[cat].find(x => String(x.id) === String(id));
+                if(i) {
+                    i.deleted = true;
+                    i.updatedAt = Date.now();
+                    persist();
+                }
+            }
+        }
+
+        // NOTES (MOBILE ONLY TAB)
+        function renderNotes(c) {
+            let h = `<div class="fade-in max-w-3xl mx-auto h-[70vh] flex flex-col pb-24">
+                        <div class="flex justify-between items-center mb-4 border-b border-[#dcdcdc] dark:border-gray-700 pb-2">
+                            <h2 class="font-nepal text-2xl text-[#7b1113] dark:text-[#ffb300] tracking-widest">Scribe's Notes</h2>
+                        </div>
+                        <textarea id="mobile-scratchpad" onblur="updateScratchpad(this.value)" class="charcoal-notes flex-1 w-full resize-none outline-none shadow-inner border border-gray-400 dark:border-gray-700 rounded-sm" placeholder="Scribble your thoughts here...">${state.scratchpad||''}</textarea>
+                    </div>`;
+            c.innerHTML = h;
+        }
+
+        // SIDEBAR
+        function renderSidebar() { let h=`<div class="p-6 border-b border-gray-300 dark:border-gray-700 mb-6 text-center"><div class="font-nepal text-sm uppercase tracking-widest text-[#2c1810] dark:text-[#ccc]">Current Scribe</div><div class="font-hand text-4xl text-[#7b1113] dark:text-[#ffb300] font-bold">${currentUser}</div></div>`; h+= `<div class="mb-6"><label class="font-nepal text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Portraits</label><div class="flex gap-2"><input onblur="updatePhotoLink(this.value)" value="${state.photoAlbum||''}" placeholder="Paste Link..." class="flex-1 bg-white border border-gray-300 dark:border-gray-600 p-1 font-mono text-xs"><a href="${state.photoAlbum}" target="_blank" class="text-[#7b1113] hover:text-[#ffb300]"><i data-lucide="image" size="18"></i></a></div></div>`; h+= `<div class="mb-6 h-96 flex flex-col"><label class="font-nepal text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Quick Notes</label><textarea id="scratchpad-area" onblur="updateScratchpad(this.value)" class="charcoal-notes flex-1 w-full resize-none outline-none shadow-inner border border-gray-400 dark:border-gray-700 rounded-sm" placeholder="Scribble here...">${state.scratchpad||''}</textarea></div>`; document.getElementById('sidebar-content').innerHTML = h; updateUserUI(); lucide.createIcons(); }
+        function updateScratchpad(val) { state.scratchpad = val; persist(); }
+        function updatePhotoLink(val) { state.photoAlbum=val; persist(); renderSidebar(); }
+        function updateUserUI() { USERS.forEach(u => { const btn = document.getElementById(`btn-${u}`); if(btn) { if(u === currentUser) btn.className = "px-2 py-1 text-[10px] font-nepal uppercase text-[#ffb300] border-b border-[#ffb300]"; else btn.className = "px-2 py-1 text-[10px] font-nepal uppercase text-gray-400 hover:text-[#ffb300]"; } }); }
+        function switchUser(u) { currentUser = u; localStorage.setItem('trio_user', u); updateUserUI(); if(document.getElementById('d-nav-wallet').classList.contains('active')) refreshUI(); }
+        function convert(t) { const i=document.getElementById('calc-inr'), n=document.getElementById('calc-npr'); if(t==='inr') n.value=(i.value*1.6).toFixed(0); else i.value=(n.value/1.6).toFixed(0); }
+        function toggleTheme() { document.documentElement.classList.toggle('dark'); const isDark = document.documentElement.classList.contains('dark'); localStorage.setItem('theme', isDark ? 'dark' : 'light'); updateThemeIcon(); }
+        function updateThemeIcon() { const isDark = document.documentElement.classList.contains('dark'); const icon = document.getElementById('theme-icon'); if(icon) { icon.parentElement.innerHTML = `<i id="theme-icon" data-lucide="${isDark ? 'sun' : 'moon'}" size="18"></i>`; lucide.createIcons(); } }
+        function toggleSidebar() { const s=document.getElementById('sidebar'); s.classList.toggle('translate-x-full'); s.classList.toggle('hidden'); if(window.innerWidth>=768) s.classList.remove('hidden'); }
+        function openModal(id){
+            document.getElementById(id).classList.remove('hidden'); 
+            if(id==='wallet-modal'){
+                tempPayer=currentUser; 
+                updatePayerUI(document.querySelectorAll('.payer-opt')[USERS.indexOf(currentUser)]);
+                isMultiPayer = false;
+                document.getElementById('single-payer-opts').classList.remove('hidden');
+                document.getElementById('multi-payer-opts').classList.add('hidden');
+                document.getElementById('multi-payer-btn').innerText = "Multiple Payers?";
+                document.getElementById('mp-yukti').value = '';
+                document.getElementById('mp-rejith').value = '';
+                document.getElementById('mp-neha').value = '';
+            }
+        }
+        function closeModal(id){document.getElementById(id).classList.add('hidden');}
+        function updatePayerUI(b){document.querySelectorAll('.payer-opt').forEach(x=>x.classList.remove('bg-[#7b1113]','text-white')); if(b)b.classList.add('bg-[#7b1113]','text-white');}
+    </script>
+</body>
+</html>
+
+
+
+
